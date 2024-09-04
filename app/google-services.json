@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1033773832790",
+    "project_id": "tugas-akhir-4db61",
+    "storage_bucket": "tugas-akhir-4db61.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1033773832790:android:bf99518ad975eb02f879f7",
+        "android_client_info": {
+          "package_name": "com.windstrom5.tugasakhir"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBbeCZ-jQLx0sBoZzUEET_-I8k5r4obHBE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

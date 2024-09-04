@@ -1,0 +1,138 @@
+[
+  {
+    "Id": 11,
+    "Kota": "ACEH"
+  },
+  {
+    "Id": 12,
+    "Kota": "SUMATERA UTARA"
+  },
+  {
+    "Id": 13,
+    "Kota": "SUMATERA BARAT"
+  },
+  {
+    "Id": 14,
+    "Kota": "RIAU"
+  },
+  {
+    "Id": 15,
+    "Kota": "JAMBI"
+  },
+  {
+    "Id": 16,
+    "Kota": "SUMATERA SELATAN"
+  },
+  {
+    "Id": 17,
+    "Kota": "BENGKULU"
+  },
+  {
+    "Id": 18,
+    "Kota": "LAMPUNG"
+  },
+  {
+    "Id": 19,
+    "Kota": "KEPULAUAN BANGKA BELITUNG"
+  },
+  {
+    "Id": 21,
+    "Kota": "KEPULAUAN RIAU"
+  },
+  {
+    "Id": 31,
+    "Kota": "DKI JAKARTA"
+  },
+  {
+    "Id": 32,
+    "Kota": "JAWA BARAT"
+  },
+  {
+    "Id": 33,
+    "Kota": "JAWA TENGAH"
+  },
+  {
+    "Id": 34,
+    "Kota": "DI YOGYAKARTA"
+  },
+  {
+    "Id": 35,
+    "Kota": "JAWA TIMUR"
+  },
+  {
+    "Id": 36,
+    "Kota": "BANTEN"
+  },
+  {
+    "Id": 51,
+    "Kota": "BALI"
+  },
+  {
+    "Id": 52,
+    "Kota": "NUSA TENGGARA BARAT"
+  },
+  {
+    "Id": 53,
+    "Kota": "NUSA TENGGARA TIMUR"
+  },
+  {
+    "Id": 61,
+    "Kota": "KALIMANTAN BARAT"
+  },
+  {
+    "Id": 62,
+    "Kota": "KALIMANTAN TENGAH"
+  },
+  {
+    "Id": 63,
+    "Kota": "KALIMANTAN SELATAN"
+  },
+  {
+    "Id": 64,
+    "Kota": "KALIMANTAN TIMUR"
+  },
+  {
+    "Id": 65,
+    "Kota": "KALIMANTAN UTARA"
+  },
+  {
+    "Id": 71,
+    "Kota": "SULAWESI UTARA"
+  },
+  {
+    "Id": 72,
+    "Kota": "SULAWESI TENGAH"
+  },
+  {
+    "Id": 73,
+    "Kota": "SULAWESI SELATAN"
+  },
+  {
+    "Id": 74,
+    "Kota": "SULAWESI TENGGARA"
+  },
+  {
+    "Id": 75,
+    "Kota": "GORONTALO"
+  },
+  {
+    "Id": 76,
+    "Kota": "SULAWESI BARAT"
+  },
+  {
+    "Id": 81,
+    "Kota": "MALUKU"
+  },
+  {
+    "Id": 82,
+    "Kota": "MALUKU UTARA"
+  },
+  {
+    "Id": 91,
+    "Kota": "PAPUA BARAT"
+  },
+  {
+    "Id": 94,
+    "Kota": "PAPUA"
+  }
+]

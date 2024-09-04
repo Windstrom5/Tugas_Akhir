@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/grey"
+    android:orientation="vertical"
+    tools:context=".activity.CustomerServiceActivity">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="240dp"
+        android:background="#293859" />
+
+    <!--Top Header Layout-->
+    <LinearLayout
+        android:id="@+id/topbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:gravity="center_vertical"
+        android:padding="16dp">
+
+        <ImageView
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:padding="10dp"
+            android:src="@drawable/baseline_arrow_back_ios_24" />
+
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scrollbars="none"
+        android:layout_below="@+id/topbar">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:paddingLeft="20dp"
+            android:paddingTop="10dp"
+            android:paddingRight="20dp">
+
+            <!--Top Profile Section -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/circularbordersolid"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <de.hdodenhof.circleimageview.CircleImageView
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:src="@drawable/emoji"/>
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:fontFamily="@font/helvetica_regular"
+                        android:text="Windstrom5"
+                        android:textColor="#424242"
+                        android:textSize="21sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/helvetica_regular"
+                        android:text="Android Developer"
+                        android:textSize="14sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:paddingBottom="10dp">
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="2"
+                        android:gravity="center"
+                        android:padding="8dp">
+
+<!--                        <ImageView-->
+<!--                            android:layout_width="35dp"-->
+<!--                            android:layout_height="35dp"-->
+<!--                            android:background="@drawable/circular_grey_bordersolid"-->
+<!--                            android:padding="10dp"-->
+<!--                            android:src="@drawable/tickinsidecircle" />-->
+
+                        <!-- Bio and Social Media -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:layout_marginTop="10dp"
+                            android:paddingBottom="10dp">
+
+                            <!-- Bio -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="2"
+                                android:gravity="center"
+                                android:padding="8dp">
+
+                                <LinearLayout
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginLeft="10dp"
+                                    android:orientation="vertical">
+
+                                    <!-- Bio Title -->
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_gravity="center"
+                                        android:text="BIO"
+                                        android:textSize="12sp"
+                                        android:textStyle="bold" />
+
+                                    <!-- Bio Text -->
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="10dp"
+                                        android:textAlignment="center"
+                                        android:text="Mahasiswa S1 Informatika \nUniversitas Atmajaya Yogyakarta"
+                                        android:textSize="12sp" />
+                                </LinearLayout>
+                            </LinearLayout>
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center"
+                                android:layout_marginTop="40dp"
+                                android:text="My Contact"
+                                android:textSize="12sp"
+                                android:textStyle="bold" />
+                            <!-- Social Media Icons -->
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
+                                android:layout_gravity="center"
+                                android:layout_marginTop="10dp"
+                                android:orientation="horizontal">
+
+                                <!-- GitHub Icon -->
+                                <ImageView
+                                    android:id="@+id/github"
+                                    android:layout_width="20dp"
+                                    android:layout_height="20dp"
+                                    android:src="@drawable/github_logo"
+                                    android:layout_marginRight="10dp" />
+                                <ImageView
+                                    android:id="@+id/steam"
+                                    android:layout_width="20dp"
+                                    android:layout_height="20dp"
+                                    android:src="@drawable/steam"
+                                    android:layout_marginRight="10dp" />
+                                <ImageView
+                                    android:id="@+id/discord"
+                                    android:layout_width="20dp"
+                                    android:layout_height="20dp"
+                                    android:src="@drawable/discord"
+                                    android:layout_marginRight="10dp" />
+                                <!-- Other Social Media Icons Here -->
+                            </LinearLayout>
+<!--                            <androidx.cardview.widget.CardView-->
+<!--                                android:layout_width="100dp"-->
+<!--                                android:layout_height="100dp"-->
+<!--                                app:cardCornerRadius="8dp"-->
+<!--                                app:cardElevation="4dp">-->
+<!--                                <FrameLayout-->
+<!--                                    android:layout_width="match_parent"-->
+<!--                                    android:layout_height="match_parent"-->
+<!--                                    android:background="@drawable/cvbg">-->
+<!--                                    <LinearLayout-->
+<!--                                        android:layout_width="match_parent"-->
+<!--                                        android:layout_height="match_parent"-->
+<!--                                        android:orientation="vertical"-->
+<!--                                        android:padding="16dp">-->
+
+<!--                                        <ImageView-->
+<!--                                            android:id="@+id/bannerImageView"-->
+<!--                                            android:layout_width="match_parent"-->
+<!--                                            android:layout_height="50dp"-->
+<!--                                            android:scaleType="centerCrop" />-->
+
+<!--                                        <ImageView-->
+<!--                                            android:id="@+id/avatarImageView"-->
+<!--                                            android:layout_width="50dp"-->
+<!--                                            android:src="@drawable/person"-->
+<!--                                            android:layout_height="30dp"-->
+<!--                                            android:layout_marginTop="-50dp"-->
+<!--                                            android:layout_gravity="center" />-->
+
+<!--                                        <TextView-->
+<!--                                            android:id="@+id/globalNameTextView"-->
+<!--                                            android:layout_width="match_parent"-->
+<!--                                            android:layout_height="20dp"-->
+<!--                                            android:text="Nickname"-->
+<!--                                            android:textSize="15sp"-->
+<!--                                            android:textStyle="bold"-->
+<!--                                            android:layout_gravity="center"-->
+<!--                                            android:layout_marginTop="5dp" />-->
+<!--                                    </LinearLayout>-->
+<!--                                </FrameLayout>-->
+<!--                            </androidx.cardview.widget.CardView>-->
+
+                        </LinearLayout>
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+
+</RelativeLayout>

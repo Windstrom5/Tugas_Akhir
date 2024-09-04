@@ -1,0 +1,351 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/background"
+    tools:context=".activity.LaporanActivity">
+
+    <ScrollView
+        android:layout_width="fill_parent"
+        android:layout_height="match_parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:clipToPadding="false"
+            android:padding="10dp"
+            android:orientation="vertical">
+            <androidx.cardview.widget.CardView
+                android:id="@+id/cardView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardElevation="4dp"
+                app:cardCornerRadius="8dp">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:clipToPadding="false"
+                    android:padding="10dp"
+                    android:orientation="vertical">
+                    <RelativeLayout
+                        android:id="@+id/rellay1"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/grad"
+                        android:paddingBottom="20dp">
+
+                        <de.hdodenhof.circleimageview.CircleImageView
+                            android:id="@+id/circleImageView"
+                            android:layout_width="100dp"
+                            android:layout_height="100dp"
+                            android:layout_marginTop="20dp"
+                            android:layout_centerHorizontal="true"
+                            android:layout_marginBottom="20dp"
+                            android:src="@drawable/profile" />
+
+                        <TextView
+                            android:id="@+id/tv_name"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_below="@+id/circleImageView"
+                            android:layout_centerHorizontal="true"
+                            android:textAlignment="center"
+                            android:layout_marginTop="10sp"
+                            android:fontFamily="@font/helveticabold"
+                            android:text="Ambatukam"
+                            android:textColor="@color/white"
+                            android:textSize="18sp" />
+
+
+                        <TextView
+                            android:id="@+id/tv_address"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textAlignment="center"
+                            android:layout_below="@+id/tv_name"
+                            android:layout_centerHorizontal="true"
+                            android:fontFamily="@font/montserrat_bold"
+                            android:text="new york, usa"
+                            android:textAllCaps="true"
+                            android:textColor="@color/address"
+                            android:textSize="14sp" />
+
+                    </RelativeLayout>
+                    <TextView
+                        android:id="@+id/instructionTextView"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Pilih Data"
+                        android:layout_gravity="center"
+                        android:textSize="16sp"
+                        android:layout_marginTop="20dp"
+                        android:layout_marginBottom="20dp"
+                        android:textColor="@color/black" />
+                    <androidx.constraintlayout.widget.ConstraintLayout
+                        android:id="@+id/constraintLayout"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+
+                        <!-- Initial TextInputLayouts -->
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/textInputJenis"
+                            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintEnd_toStartOf="@id/textInputData"
+                            app:layout_constraintTop_toTopOf="parent"
+                            app:layout_constraintWidth_percent="0.4">
+
+                            <AutoCompleteTextView
+                                android:id="@+id/ACJenis"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:background="@color/primaryTextColor"
+                                android:hint="Jenis Fitur"
+                                android:maxLines="1"
+                                android:textSize="@dimen/newsMoreTextSize" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/textInputData"
+                            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            app:layout_constraintStart_toEndOf="@id/textInputJenis"
+                            app:layout_constraintEnd_toEndOf="parent"
+                            app:layout_constraintTop_toTopOf="parent"
+                            app:layout_constraintWidth_percent="0.4"
+                            android:layout_marginStart="10dp">
+
+                            <AutoCompleteTextView
+                                android:id="@+id/ACData"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:background="@color/primaryTextColor"
+                                android:hint="Data Fitur"
+                                android:maxLines="1"
+                                android:textSize="@dimen/newsMoreTextSize" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <!-- Expandable Section for Bulan and Tahun -->
+                        <LinearLayout
+                            android:id="@+id/expandableLayout"
+                            android:layout_marginTop="16dp"
+                            android:layout_width="0dp"
+                            android:visibility="gone"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintEnd_toEndOf="parent"
+                            app:layout_constraintTop_toBottomOf="@id/textInputJenis">
+                            <androidx.constraintlayout.widget.ConstraintLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content">
+
+                                <!-- Top-left TextInputLayout -->
+                                <com.google.android.material.textfield.TextInputLayout
+                                    android:id="@+id/textInputBulan"
+                                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    app:layout_constraintStart_toStartOf="parent"
+                                    app:layout_constraintEnd_toStartOf="@id/textInputTahun"
+                                    app:layout_constraintTop_toTopOf="parent"
+                                    app:layout_constraintWidth_percent="0.4">
+
+                                    <AutoCompleteTextView
+                                        android:id="@+id/ACBulan"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:background="@color/primaryTextColor"
+                                        android:hint="Bulan"
+                                        android:maxLines="1"
+                                        android:textSize="@dimen/newsMoreTextSize" />
+                                </com.google.android.material.textfield.TextInputLayout>
+
+                                <!-- Top-right TextInputLayout -->
+                                <com.google.android.material.textfield.TextInputLayout
+                                    android:id="@+id/textInputTahun"
+                                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    app:layout_constraintStart_toEndOf="@id/textInputBulan"
+                                    app:layout_constraintEnd_toEndOf="parent"
+                                    app:layout_constraintTop_toTopOf="@id/textInputBulan"
+                                    app:layout_constraintWidth_percent="0.4"
+                                    android:layout_marginStart="10dp">
+
+                                    <AutoCompleteTextView
+                                        android:id="@+id/ACTahun"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:background="@color/primaryTextColor"
+                                        android:hint="Tahun"
+                                        android:maxLines="1"
+                                        android:textSize="@dimen/newsMoreTextSize" />
+                                </com.google.android.material.textfield.TextInputLayout>
+
+                                <!-- Bottom-left TextInputLayout -->
+                                <com.google.android.material.textfield.TextInputLayout
+                                    android:id="@+id/textInputChart"
+                                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    app:layout_constraintStart_toStartOf="parent"
+                                    app:layout_constraintEnd_toStartOf="@id/textInputPegawai"
+                                    app:layout_constraintTop_toBottomOf="@id/textInputBulan"
+                                    app:layout_constraintWidth_percent="0.4"
+                                    android:layout_marginTop="16dp">
+
+                                    <AutoCompleteTextView
+                                        android:id="@+id/ACChart"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:background="@color/primaryTextColor"
+                                        android:hint="Chart"
+                                        android:maxLines="1"
+                                        android:textSize="@dimen/newsMoreTextSize" />
+                                </com.google.android.material.textfield.TextInputLayout>
+
+                                <!-- Bottom-right TextInputLayout -->
+                                <com.google.android.material.textfield.TextInputLayout
+                                    android:id="@+id/textInputPegawai"
+                                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    app:layout_constraintStart_toEndOf="@id/textInputChart"
+                                    app:layout_constraintEnd_toEndOf="parent"
+                                    app:layout_constraintTop_toTopOf="@id/textInputChart"
+                                    app:layout_constraintWidth_percent="0.4"
+                                    android:layout_marginStart="10dp">
+
+                                    <AutoCompleteTextView
+                                        android:id="@+id/ACPegawai"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:background="@color/primaryTextColor"
+                                        android:hint="Pegawai"
+                                        android:maxLines="1"
+                                        android:textSize="@dimen/newsMoreTextSize" />
+                                </com.google.android.material.textfield.TextInputLayout>
+                            </androidx.constraintlayout.widget.ConstraintLayout>
+
+                        </LinearLayout>
+
+                        <!-- Expand/Collapse Button -->
+
+
+                    </androidx.constraintlayout.widget.ConstraintLayout>
+                    <TextView
+                        android:id="@+id/expandCollapseButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Expand"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:onClick="toggleExpandCollapse"
+                        android:layout_marginTop="16dp"
+                        android:layout_gravity="center" />
+
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <br.com.simplepass.loading_button_lib.customViews.CircularProgressButton
+                android:id="@+id/create"
+                style="@style/loginButton"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="@dimen/loginViewsMargin"
+                android:text="Create Chart"
+                android:textAlignment="center"
+                app:initialCornerAngle="27dp"
+                android:layout_marginBottom="20dp"
+                app:spinning_bar_color="#FFF"
+                app:spinning_bar_padding="6dp"
+                app:spinning_bar_width="4dp" />
+
+
+
+            <androidx.cardview.widget.CardView
+                android:id="@+id/card1"
+                android:layout_width="match_parent"
+                android:layout_height="300dp"
+                android:clickable="true"
+                app:cardElevation="4dp"
+                app:cardCornerRadius="8dp"
+                android:foreground="?android:attr/selectableItemBackground">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_margin="8dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/barChartTitleTV"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="left"
+                        android:text="Statistic"
+                        android:textColor="@color/mdtp_red"
+                        android:textSize="20sp"
+                        android:textStyle="normal" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="10dp"
+                        android:gravity="left"
+                        android:text="Taxes"
+                        android:textColor="@color/grey"
+                        android:textSize="15sp"
+                        android:textStyle="normal" />
+
+                    <com.github.aachartmodel.aainfographics.aachartcreator.AAChartView
+                        android:id="@+id/barChart"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:layout_marginTop="10dp" />
+
+                </LinearLayout>
+
+            </androidx.cardview.widget.CardView>
+            <androidx.cardview.widget.CardView
+                android:id="@+id/suggestionsCardView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                app:cardElevation="4dp"
+                app:cardCornerRadius="8dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:id="@+id/suggestionsTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Suggestions"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="8dp"/>
+
+                    <TextView
+                        android:id="@+id/suggestionsText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Here are some insights based on the chart data..."
+                        android:textSize="16sp" />
+
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+        </LinearLayout>
+    </ScrollView>
+
+</FrameLayout>

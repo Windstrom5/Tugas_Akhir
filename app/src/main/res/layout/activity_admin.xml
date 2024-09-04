@@ -1,0 +1,412 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.mindinventory.midrawer.MIDrawerView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/drawer_layout"
+    android:background="@drawable/background"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    app:sliderType="doorOut"
+    tools:openDrawer="start">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="#50C878"
+            android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
+            app:layout_constraintTop_toTopOf="parent"
+            app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
+            app:titleTextColor="@color/common_google_signin_btn_text_dark_focused"
+            app:title="Workhubs Admin Dashboard" />
+
+<!--            <TextView-->
+<!--                android:layout_width="wrap_content"-->
+<!--                android:layout_height="wrap_content"-->
+<!--                android:layout_gravity="center"-->
+<!--                android:text="Admin Dashboard"-->
+<!--                android:textAllCaps="true"-->
+<!--                android:textColor="@color/common_google_signin_btn_text_dark_focused"-->
+<!--                android:textSize="20sp"-->
+<!--                android:textStyle="bold" />-->
+<!--        </androidx.appcompat.widget.Toolbar>-->
+        <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+            android:id="@+id/swipeRefreshLayout"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            app:layout_constraintBottom_toTopOf="@id/courtesyNoticeTextView"
+            app:layout_constraintTop_toBottomOf="@id/toolbar">
+            <ScrollView
+                android:id="@+id/SV"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_marginBottom="12dp"
+                android:orientation="vertical"
+                app:layout_constraintBottom_toTopOf="@id/courtesyNoticeTextView"
+                app:layout_constraintTop_toBottomOf="@+id/toolbar">
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <FrameLayout
+                        android:id="@+id/view"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp"
+                        android:visibility="gone"
+                        android:layout_marginEnd="16dp"
+                        android:background="@drawable/custom_rectangle"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent">
+
+                        <androidx.constraintlayout.widget.ConstraintLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent">
+
+                            <ImageView
+                                android:id="@+id/weatherIcon"
+                                android:layout_width="95dp"
+                                android:layout_height="85dp"
+                                android:layout_marginStart="8dp"
+                                android:src="@drawable/sunny"
+                                app:layout_constraintBottom_toBottomOf="parent"
+                                app:layout_constraintStart_toStartOf="parent"
+                                app:layout_constraintTop_toTopOf="parent" />
+
+                            <TextView
+                                android:id="@+id/dayText"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginBottom="5dp"
+                                android:text="It's Sunday"
+                                android:textColor="@android:color/black"
+                                android:textSize="14sp"
+                                app:layout_constraintEnd_toEndOf="parent"
+                                app:layout_constraintHorizontal_bias="0.0"
+                                app:layout_constraintStart_toEndOf="@id/weatherIcon"
+                                app:layout_constraintTop_toTopOf="@id/weatherIcon" />
+
+                            <TextView
+                                android:id="@+id/location"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_margin="5dp"
+                                android:text="Current Location"
+                                android:textColor="@android:color/black"
+                                android:textSize="14sp"
+                                app:layout_constraintEnd_toEndOf="parent"
+                                app:layout_constraintHorizontal_bias="0.0"
+                                app:layout_constraintStart_toEndOf="@id/weatherIcon"
+                                app:layout_constraintTop_toBottomOf="@id/dayText" />
+
+                        </androidx.constraintlayout.widget.ConstraintLayout>
+                    </FrameLayout>
+
+                    <TextView
+                        android:id="@+id/tx2"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="20dp"
+                        android:layout_marginBottom="20dp"
+                        android:foregroundGravity="center"
+                        android:gravity="center"
+                        android:text="Some News for You"
+                        android:textAllCaps="true"
+                        android:textColor="@color/common_google_signin_btn_text_dark_focused"
+                        android:textSize="20sp"
+                        android:textStyle="bold"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toBottomOf="@+id/view" />
+
+                    <androidx.cardview.widget.CardView
+                        android:id="@+id/cv2"
+                        android:layout_width="match_parent"
+                        android:layout_height="250dp"
+                        android:layout_margin="10dp"
+                        app:cardCornerRadius="8dp"
+                        app:cardElevation="4dp"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toBottomOf="@+id/tx2">
+
+                        <RelativeLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:padding="16dp">
+
+                            <androidx.viewpager2.widget.ViewPager2
+                                android:id="@+id/viewPager"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent" />
+
+                            <com.google.android.material.tabs.TabLayout
+                                android:id="@+id/tabLayout"
+                                android:layout_width="wrap_content"
+                                android:layout_height="20dp"
+                                android:layout_below="@id/viewPager"
+                                android:layout_centerHorizontal="true"
+                                app:tabIndicatorColor="@android:color/transparent"
+                                app:tabIndicatorHeight="0dp" />
+
+                            <ImageButton
+                                android:id="@+id/btnPrevious"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_alignParentStart="true"
+                                android:layout_centerVertical="true"
+                                android:background="@android:color/transparent"
+                                android:src="@android:drawable/ic_media_previous" />
+
+                            <ImageButton
+                                android:id="@+id/btnNext"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_alignParentEnd="true"
+                                android:layout_centerVertical="true"
+                                android:background="@android:color/transparent"
+                                android:src="@android:drawable/ic_media_next" />
+                        </RelativeLayout>
+                    </androidx.cardview.widget.CardView>
+
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp"
+                        android:layout_marginTop="20dp"
+                        android:layout_marginEnd="16dp"
+                        android:layout_marginBottom="12dp"
+                        android:orientation="vertical"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toBottomOf="@+id/cv2">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:foregroundGravity="center"
+                            android:gravity="center"
+                            android:text="Fitur Admin"
+                            android:textAllCaps="true"
+                            android:textColor="@color/common_google_signin_btn_text_dark_focused"
+                            android:textSize="20sp"
+                            android:textStyle="bold" />
+
+                        <LinearLayout
+                            android:id="@+id/linearLayout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:gravity="center_horizontal"
+                            android:orientation="horizontal"
+                            android:weightSum="2"
+                            app:layout_constraintEnd_toEndOf="parent"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintTop_toBottomOf="@+id/cardView">
+
+                            <androidx.cardview.widget.CardView
+                                android:id="@+id/AbsensiCard"
+                                android:layout_width="128dp"
+                                android:layout_height="128dp"
+                                android:layout_margin="8dp"
+                                android:layout_marginEnd="16dp"
+                                android:clickable="true"
+                                android:elevation="12dp"
+                                android:focusable="true"
+                                android:foreground="?android:attr/selectableItemBackground"
+                                app:cardCornerRadius="8dp">
+
+                                <androidx.constraintlayout.widget.ConstraintLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent"
+                                    android:background="@drawable/attendance">
+
+                                    <TextView
+                                        android:id="@+id/textView1"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginBottom="4dp"
+                                        android:background="@color/black"
+                                        android:foregroundGravity="center"
+                                        android:gravity="center"
+                                        android:text="Kehadiran"
+                                        android:textAllCaps="true"
+                                        android:textColor="#50C878"
+                                        android:textSize="14sp"
+                                        android:textStyle="bold"
+                                        app:layout_constraintBottom_toBottomOf="parent"
+                                        app:layout_constraintEnd_toEndOf="parent"
+                                        app:layout_constraintHorizontal_bias="0.0"
+                                        app:layout_constraintStart_toStartOf="parent" />
+
+                                </androidx.constraintlayout.widget.ConstraintLayout>
+
+                            </androidx.cardview.widget.CardView>
+
+                            <androidx.cardview.widget.CardView
+                                android:id="@+id/LemburCard"
+                                android:layout_width="128dp"
+                                android:layout_height="128dp"
+                                android:layout_margin="8dp"
+                                android:layout_marginStart="16dp"
+                                android:clickable="true"
+                                android:elevation="12dp"
+                                android:focusable="true"
+                                android:foreground="?android:attr/selectableItemBackground"
+                                app:cardCornerRadius="8dp">
+
+                                <androidx.constraintlayout.widget.ConstraintLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent"
+                                    android:background="@drawable/lembur">
+
+                                    <TextView
+                                        android:id="@+id/textView20"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginBottom="4dp"
+                                        android:background="@color/black"
+                                        android:foregroundGravity="center"
+                                        android:gravity="center"
+                                        android:text="Lembur"
+                                        android:textAllCaps="true"
+                                        android:textColor="#50C878"
+                                        android:textSize="14sp"
+                                        android:textStyle="bold"
+                                        app:layout_constraintBottom_toBottomOf="parent"
+                                        app:layout_constraintEnd_toEndOf="parent"
+                                        app:layout_constraintHorizontal_bias="0.0"
+                                        app:layout_constraintStart_toStartOf="parent" />
+
+                                </androidx.constraintlayout.widget.ConstraintLayout>
+
+                            </androidx.cardview.widget.CardView>
+
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:id="@+id/linearLayout2"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_horizontal"
+                            android:orientation="horizontal"
+                            android:weightSum="2"
+                            app:layout_constraintEnd_toEndOf="parent"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintTop_toBottomOf="@+id/linearLayout">
+
+                            <androidx.cardview.widget.CardView
+                                android:id="@+id/DinasCard"
+                                android:layout_width="128dp"
+                                android:layout_height="128dp"
+                                android:layout_margin="8dp"
+                                android:layout_marginEnd="16dp"
+                                android:clickable="true"
+                                android:elevation="12dp"
+                                android:focusable="true"
+                                android:foreground="?android:attr/selectableItemBackground"
+                                app:cardCornerRadius="8dp">
+
+                                <androidx.constraintlayout.widget.ConstraintLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent"
+                                    android:background="@drawable/dinas">
+
+                                    <TextView
+                                        android:id="@+id/textView21"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginBottom="4dp"
+                                        android:background="@color/black"
+                                        android:foregroundGravity="center"
+                                        android:gravity="center"
+                                        android:text="Dinas"
+                                        android:textAllCaps="true"
+                                        android:textColor="#50C878"
+                                        android:textSize="14sp"
+                                        android:textStyle="bold"
+                                        app:layout_constraintBottom_toBottomOf="parent"
+                                        app:layout_constraintEnd_toEndOf="parent"
+                                        app:layout_constraintHorizontal_bias="0.0"
+                                        app:layout_constraintStart_toStartOf="parent" />
+
+                                </androidx.constraintlayout.widget.ConstraintLayout>
+
+                            </androidx.cardview.widget.CardView>
+
+                            <androidx.cardview.widget.CardView
+                                android:id="@+id/IzinCard"
+                                android:layout_width="128dp"
+                                android:layout_height="128dp"
+                                android:layout_margin="8dp"
+                                android:layout_marginStart="16dp"
+                                android:clickable="true"
+                                android:elevation="12dp"
+                                android:focusable="true"
+                                android:foreground="?android:attr/selectableItemBackground"
+                                app:cardCornerRadius="8dp">
+
+                                <androidx.constraintlayout.widget.ConstraintLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent"
+                                    android:background="@drawable/home">
+
+                                    <TextView
+                                        android:id="@+id/textView22"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginBottom="4dp"
+                                        android:background="@color/black"
+                                        android:foregroundGravity="center"
+                                        android:gravity="center"
+                                        android:text="Izin"
+                                        android:textAllCaps="true"
+                                        android:textColor="#50C878"
+                                        android:textSize="14sp"
+                                        android:textStyle="bold"
+                                        app:layout_constraintBottom_toBottomOf="parent"
+                                        app:layout_constraintEnd_toEndOf="parent"
+                                        app:layout_constraintHorizontal_bias="0.0"
+                                        app:layout_constraintStart_toStartOf="parent" />
+
+                                </androidx.constraintlayout.widget.ConstraintLayout>
+
+                            </androidx.cardview.widget.CardView>
+
+                        </LinearLayout>
+                    </LinearLayout>
+                </androidx.constraintlayout.widget.ConstraintLayout>
+            </ScrollView>
+        </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+        <TextView
+            android:id="@+id/courtesyNoticeTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|center_horizontal"
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="8dp"
+            android:text="© This Year Your Company Name. \nAll rights reserved"
+            android:textAlignment="center"
+            android:textColor="@color/black"
+            android:textSize="12sp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+    <RelativeLayout
+        android:id="@+id/mainLayout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="start">
+
+        <!-- Include menu_layout -->
+        <include layout="@layout/menu_layout"/>
+
+    </RelativeLayout>
+</com.mindinventory.midrawer.MIDrawerView>

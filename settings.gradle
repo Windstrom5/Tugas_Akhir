@@ -1,0 +1,30 @@
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+        maven {
+            url = uri("https://maven.pkg.github.com/shiburagi/Drawer-Behavior")
+            credentials {
+                username = "shiburagi"
+                password = "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"
+            }
+        }
+        maven { url = uri("https://jitpack.io") } // Add JitPack repository
+    }
+}
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+        maven {
+            url = uri("https://jitpack.io")
+        }
+    }
+}
+
+rootProject.name = "Tugas Akhir"
+include ':app'
+include ':app', ':drawerbehavior'

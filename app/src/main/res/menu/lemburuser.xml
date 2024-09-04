@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/addlembur"
+        android:title="Tambah Lembur"
+        android:icon="@drawable/lembur"/>
+
+    <item
+        android:id="@+id/historylembur"
+        android:title="History Lembur"
+        android:icon="@drawable/history"/>
+</menu>

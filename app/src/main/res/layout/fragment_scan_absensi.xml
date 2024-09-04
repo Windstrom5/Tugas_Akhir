@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".fragment.ScanAbsensiFragment">
+    <nl.dionsegijn.konfetti.xml.KonfettiView
+        android:id="@+id/konfettiView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+    <!--    <com.google.android.material.appbar.MaterialToolbar-->
+    <!--        android:id="@+id/toolbar"-->
+    <!--        android:layout_width="match_parent"-->
+    <!--        android:layout_height="wrap_content"-->
+    <!--        android:background="#F9FCFF">-->
+
+    <!--        <androidx.appcompat.widget.LinearLayoutCompat-->
+    <!--            android:layout_width="match_parent"-->
+    <!--            android:layout_height="wrap_content"-->
+    <!--            android:gravity="center"-->
+    <!--            android:orientation="horizontal">-->
+
+    <!--            <ImageView-->
+    <!--                android:layout_width="wrap_content"-->
+    <!--                android:layout_height="30dp"-->
+    <!--                app:tint="#003549"-->
+    <!--                android:src="@drawable/ic_group_2" />-->
+
+    <!--            <ImageView-->
+    <!--                android:layout_width="24dp"-->
+    <!--                android:layout_height="22dp"-->
+    <!--                android:layout_marginLeft="4dp"-->
+    <!--                android:src="@drawable/ic_main_icon_themed" />-->
+    <!--        </androidx.appcompat.widget.LinearLayoutCompat>-->
+    <!--    </com.google.android.material.appbar.MaterialToolbar>-->
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+            <ImageView
+                android:id="@+id/logoImage"
+                android:layout_width="100dp"
+                android:layout_height="100dp"
+                android:layout_gravity="center"
+                android:src="@drawable/company" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Scan QR code"
+                android:textColor="@color/black"
+                android:textStyle="bold"
+                android:layout_gravity="center"
+                android:textSize="19sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Place  QR code inside the frame to scan. Please \navoid shake to get results quickly "
+                android:gravity="center"
+                android:textColor="@android:color/tertiary_text_dark"
+                android:layout_marginTop="12dp"
+                android:layout_marginBottom="12dp" />
+
+            <com.budiyev.android.codescanner.CodeScannerView
+                android:id="@+id/scanner_view"
+                android:layout_width="match_parent"
+                android:layout_height="350dp"
+                app:autoFocusButtonColor="#219BCC"
+                app:autoFocusButtonVisible="true"
+                app:flashButtonColor="#219BCC"
+                app:flashButtonVisible="true"
+                app:frameAspectRatioHeight="1"
+                app:frameAspectRatioWidth="1"
+                app:frameColor="#219BCC"
+                app:frameCornersRadius="50dp"
+                app:frameCornersSize="40dp"
+                app:frameSize="0.70"
+                app:frameThickness="6dp"
+                android:nestedScrollingEnabled="false"
+                app:maskColor="#F9FCFF" />
+            <com.airbnb.lottie.LottieAnimationView
+                android:id="@+id/lottie"
+                android:layout_width="match_parent"
+                android:layout_height="350dp"
+                android:visibility="gone"
+                app:lottie_rawRes="@raw/work"/>
+            <TextView
+                android:id="@+id/textView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Scanning code..."
+                android:textColor="@android:color/tertiary_text_dark"
+                android:layout_gravity="center"
+                android:textSize="16sp" />
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+
+</RelativeLayout>

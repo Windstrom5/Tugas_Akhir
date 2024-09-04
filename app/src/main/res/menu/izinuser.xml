@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/addizin"
+        android:title="Tambah Izin"
+        android:icon="@drawable/home"/>
+
+    <item
+        android:id="@+id/historyizin"
+        android:title="History Izin"
+        android:icon="@drawable/history"/>
+</menu>
