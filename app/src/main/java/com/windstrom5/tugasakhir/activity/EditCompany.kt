@@ -2,11 +2,14 @@ package com.windstrom5.tugasakhir.activity
 
 import android.app.Activity
 import android.content.Intent
+import android.graphics.Bitmap
 import android.net.Uri
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.provider.MediaStore
+import android.text.Editable
 import android.text.InputType
+import android.text.TextWatcher
 import android.util.Log
 import android.view.View
 import android.widget.Button
@@ -15,10 +18,16 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.res.ResourcesCompat
 import com.afollestad.materialdialogs.MaterialDialog
+import com.afollestad.materialdialogs.WhichButton
+import com.afollestad.materialdialogs.actions.setActionButtonEnabled
+import com.afollestad.materialdialogs.input.getInputField
 import com.afollestad.materialdialogs.input.input
+import com.android.volley.toolbox.ImageRequest
+import com.android.volley.toolbox.Volley
 import com.bumptech.glide.Glide
 import com.google.android.material.textfield.TextInputLayout
 import com.google.android.material.timepicker.MaterialTimePicker
@@ -27,10 +36,12 @@ import com.windstrom5.tugasakhir.R
 import com.windstrom5.tugasakhir.connection.ApiResponse
 import com.windstrom5.tugasakhir.connection.ApiService
 import com.windstrom5.tugasakhir.connection.ReverseGeocoder
+import com.windstrom5.tugasakhir.connection.SharedPreferencesManager
 import com.windstrom5.tugasakhir.databinding.ActivityEditCompanyBinding
 import com.windstrom5.tugasakhir.model.Admin
 import com.windstrom5.tugasakhir.model.Pekerja
 import com.windstrom5.tugasakhir.model.Perusahaan
+import com.windstrom5.tugasakhir.model.UpdatedPerusahaan
 import de.hdodenhof.circleimageview.CircleImageView
 import okhttp3.MediaType
 import okhttp3.MultipartBody
@@ -48,6 +59,7 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
+import java.sql.Time
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -178,54 +190,111 @@ class EditCompany : AppCompatActivity() {
             loadingLayout?.visibility = View.INVISIBLE
         }
     }
+
     private fun updateData(Id: Int) {
         val url = "http://192.168.1.6:8000/api/"
-
+        val sharedPreferencesManager = SharedPreferencesManager(this@EditCompany)
         val retrofit = Retrofit.Builder()
             .baseUrl(url)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
-
         val apiService = retrofit.create(ApiService::class.java)
-        val nama = createPartFromString(textNama.toString())
-        val jammasuk = createPartFromString(textJamMasuk.toString())
-        val jamkeluar = createPartFromString(textJamKeluar.toString())
+        val nama = createPartFromString(textNama.text.toString())
+        val jam_masuk = stringToSqlTime(textJamMasuk.text.toString())
+        val jam_keluar = stringToSqlTime(textJamKeluar.text.toString())
+        val jammasuk = createPartFromString(jam_masuk.toString())
+        val jamkeluar = createPartFromString(jam_keluar.toString())
         val latitude = createPartFromString(latitude.toString())
         val longitude = createPartFromString(longitude.toString())
-
         val call: Call<ApiResponse>
-
-        if (selectedFile != null) {
-            val requestFile = RequestBody.create(MediaType.parse("image/*"), selectedFile)
-            val logoPart = MultipartBody.Part.createFormData("logo", selectedFile!!.name, requestFile)
-            call = apiService.updatePerusahaan(Id, nama, jammasuk, jamkeluar, latitude, longitude, logoPart)
-        } else {
-            call = apiService.updatePerusahaanNoFile(Id, nama, jammasuk, jamkeluar, latitude, longitude)
+//        if (selectedFile != null) {
+        val logoPart = selectedFile?.let {
+            val requestFile = RequestBody.create(MediaType.parse("image/jpeg"), it)
+            MultipartBody.Part.createFormData("logo", it.name, requestFile)
         }
+        Log.d("ApiResponse",selectedFile.toString())
+        call = apiService.updatePerusahaan(Id, nama, jammasuk, jamkeluar, latitude, longitude, logoPart)
+
+//        }else {
+//            call = if (admin != null) {
+//                apiService.updateAdminNoFile(Id, nama, tanggal, email)
+//            } else {
+//                apiService.updatePekerjaNoFile(Id, nama, tanggal, email)
+//            }
+//        }
         call.enqueue(object : Callback<ApiResponse> {
             override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
                 if (response.isSuccessful) {
                     val apiResponse = response.body()
+
                     Log.d("ApiResponse", "Status: ${apiResponse?.status}, Message: ${apiResponse?.message}")
                     MotionToast.createToast(
                         this@EditCompany,
-                        "Update User Success",
-                        "Data User Berhasil Diperbarui",
+                        "Update Perusahaan Success",
+                        "Data Perusahaan Berhasil Diperbarui",
                         MotionToastStyle.SUCCESS,
                         MotionToast.GRAVITY_BOTTOM,
                         MotionToast.LONG_DURATION,
                         ResourcesCompat.getFont(this@EditCompany, R.font.ralewaybold)
                     )
+
+                    val updatedPerusahaan = apiResponse?.perusahaan as UpdatedPerusahaan
+                    val dateParser = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                    val javaUtilDate = dateParser.parse(updatedPerusahaan.batas_aktif)
+                    val sqlDate = java.sql.Date(javaUtilDate.time)
+                    val perusahaanUpdated = Perusahaan(
+                        updatedPerusahaan.id,
+                        updatedPerusahaan.nama,
+                        updatedPerusahaan.latitude,
+                        updatedPerusahaan.longitude,
+                        stringToSqlTime(updatedPerusahaan.jam_masuk),
+                        stringToSqlTime(updatedPerusahaan.jam_keluar),
+                        sqlDate,
+                        updatedPerusahaan.logo,
+                        updatedPerusahaan.secret_key,
+                        updatedPerusahaan.holiday
+                    )
+                    Log.d("currecnt",updatedPerusahaan.toString())
+                    sharedPreferencesManager.removePerusahaan()
+                    sharedPreferencesManager.savePerusahaan(perusahaanUpdated)
+                    val intent = Intent(this@EditCompany, CompanyActivity::class.java)
+                    val userBundle = Bundle()
+                    userBundle.putParcelable("user", if (admin != null) admin else pekerja)
+                    userBundle.putParcelable("perusahaan", perusahaanUpdated)
+                    userBundle.putString("role", if (admin != null) "Admin" else "Pekerja")
+                    intent.putExtra("data", userBundle)
+                    startActivity(intent)
                 } else {
-                    Log.e("ApiResponse", "Error: ${response.code()}")
+                    // Log the error body from the response
+                    val errorBody = response.errorBody()?.string()
+                    Log.e("ApiResponse", "Error: ${response.code()}, Error Body: $errorBody, nama = ${textNama.text}")
+
+                    // You can also show a toast or a MotionToast with the error message
+                    MotionToast.createToast(
+                        this@EditCompany,
+                        "Update Perusahaan Failed",
+                        "Error: $errorBody",
+                        MotionToastStyle.ERROR,
+                        MotionToast.GRAVITY_BOTTOM,
+                        MotionToast.LONG_DURATION,
+                        ResourcesCompat.getFont(this@EditCompany, R.font.ralewaybold)
+                    )
                 }
+                setLoading(false)
             }
 
             override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
-                Log.e("ApiResponse", "Request failed: ${t.message}")
+                Log.e("ApiResponse", "Request failed: ${t.message}",)
+                setLoading(false)
             }
         })
         setLoading(false)
+    }
+
+    private fun stringToSqlTime(timeString: String): Time {
+        val dateFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+        val date = dateFormat.parse(timeString)
+        return Time(date.time)
     }
     private fun createPartFromString(value: String): RequestBody {
         return RequestBody.create(MediaType.parse("text/plain"), value)
@@ -283,20 +352,40 @@ class EditCompany : AppCompatActivity() {
         return null
     }
     private fun showNamaTextDialog() {
-        MaterialDialog(this).show {
-            title(text = "Enter New Company Name")
-            input(hint = "Nama Perusahaan", prefill = textNama.text.toString()) { dialog, text ->
-                // Handle the text input when the user clicks OK
-                val enteredText = text.toString()
+        val initialText = textNama.text.toString()
+        val titleText = "Nama Perusahaan"
+
+        val dialog = MaterialDialog(this).show {
+            title(text = titleText)  // Set the dialog title
+            input(
+                hint = "Masukkan Nama",
+                prefill = initialText,
+                inputType = InputType.TYPE_CLASS_TEXT
+            ) { dialog, input ->
+                // Enable the positive button only if the input is not empty
+                dialog.setActionButtonEnabled(WhichButton.POSITIVE, input.isNotBlank())
+            }
+            positiveButton(text = "OK") { dialog ->
+                val enteredText = dialog.getInputField().text.toString()
                 textNama.setText(enteredText)
-                // Do something with the entered text
             }
-            positiveButton(text = "OK")
-            negativeButton(text = "Cancel") { dialog ->
-                // Handle the cancellation if needed
-                dialog.dismiss()
-            }
+            negativeButton(text = "Cancel")
         }
+        dialog.getInputField().addTextChangedListener(object : TextWatcher {
+            override fun afterTextChanged(s: Editable?) {
+                val inputText = s.toString()
+                val isValid = inputText.isNotBlank()
+                dialog.setActionButtonEnabled(WhichButton.POSITIVE, isValid)
+
+                // Show error if input is invalid
+                dialog.getInputField().error = when {
+                    inputText.isBlank() -> "Nama cannot be empty"
+                    else -> null // Clear error if valid
+                }
+            }
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+        })
     }
 
 
@@ -312,12 +401,23 @@ class EditCompany : AppCompatActivity() {
                 }else{
                     pekerja = it.getParcelable("user")
                 }
-                if(logo == null){
+                if(logo != null){
                     val imageUrl =
-                        "http://192.168.1.6:8000/storage/${perusahaan?.logo}"
-                    Glide.with(this)
-                        .load(imageUrl)
-                        .into(profile)
+                        "http://192.168.1.6:8000/api/Perusahaan/decryptLogo/${perusahaan?.id}"
+                    val imageRequest = ImageRequest(
+                        imageUrl,
+                        { response ->
+                            // Set the Bitmap to an ImageView or handle it as needed
+                            profile.setImageBitmap(response)
+                        },
+                        0, 0, ImageView.ScaleType.CENTER_CROP, Bitmap.Config.RGB_565,
+                        { error ->
+                            error.printStackTrace()
+                            Toast.makeText(this, "Failed to fetch profile image", Toast.LENGTH_SHORT).show()
+                        }
+                    )
+                    val requestQueue = Volley.newRequestQueue(this)
+                    requestQueue.add(imageRequest)
                 }else{
                     Glide.with(this)
                         .load(R.drawable.logo)
@@ -358,7 +458,7 @@ class EditCompany : AppCompatActivity() {
                     latitude = it.getDouble("latitude")
                     longitude = it.getDouble("longitude")
                     val imageUrl =
-                        "http://192.168.1.6:8000/storage/${perusahaan?.logo}" // Replace with your Laravel image URL
+                        "http://192.168.1.6:8000/api/Perusahaan/decryptLogo/${perusahaan?.id}" // Replace with your Laravel image URL
                     textNama.setText(it.getString("namaPerusahaan"))
                     textJamMasuk.setText(it.getString("openhour"))
                     textJamKeluar.setText(it.getString("closehour"))

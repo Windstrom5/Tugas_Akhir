@@ -374,7 +374,8 @@ class RegisterAdminActivity : AppCompatActivity() {
                         perusahaancreate!!.jam_keluar,
                         sqlDate,
                         path,
-                        perusahaancreate!!.secret_key
+                        perusahaancreate!!.secret_key,
+                        perusahaancreate!!.holiday
                     )
                     Log.d("RegisterFailed3", "Tidak Dapat Menyimpan Data. Response Code: ${perusahaan?.id}")
                     Log.d("RegisterDebug", perusahaan.toString())

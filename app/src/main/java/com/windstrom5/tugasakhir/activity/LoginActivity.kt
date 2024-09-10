@@ -340,6 +340,7 @@ class LoginActivity : AppCompatActivity() {
                         val sqlDate = java.sql.Date(javaUtilDate.time)
                         val logo = perusahaanObject.getString("logo")
                         val secretKey = perusahaanObject.getString("secret_key")
+                        val holiday = perusahaanObject.getString("holiday")
                         sharedPreferencesManager.clearUserData()
                         Log.d("Role",role)
                         if (role == "Admin") {
@@ -361,7 +362,8 @@ class LoginActivity : AppCompatActivity() {
                                 jam_keluar,
                                 sqlDate,
                                 logo,
-                                secretKey
+                                secretKey,
+                                holiday
                             )
                             setLoading(false)
                             val vectorDrawable = ContextCompat.getDrawable(this@LoginActivity, R.drawable.done_bitmap)
@@ -390,7 +392,8 @@ class LoginActivity : AppCompatActivity() {
                                 jam_keluar,
                                 sqlDate,
                                 logo,
-                                secretKey
+                                secretKey,
+                                holiday
                             )
                             val pekerja = Pekerja(
                                 user.getInt("id"),
@@ -407,6 +410,7 @@ class LoginActivity : AppCompatActivity() {
                                 .addConverterFactory(GsonConverterFactory.create())
                                 .build()
                             val apiService = retrofit.create(ApiService::class.java)
+                            Log.d("Role",perusahaan.nama+pekerja.nama)
                             val call = apiService.getDataAbsenPekerja(perusahaan.nama,pekerja.nama)
                             call.enqueue(object : Callback<ResponseBody> {
                                 override fun onResponse(call: Call<ResponseBody>, response: Response<ResponseBody>) {
@@ -416,6 +420,7 @@ class LoginActivity : AppCompatActivity() {
                                                 val jsonResponse = responseBody.string()
                                                 val jsonArray = JSONArray(jsonResponse)
                                                 val today = java.sql.Date(System.currentTimeMillis())
+                                                Log.d("Role",jsonResponse)
                                                 if (jsonArray.length() == 0) {
                                                     // No data in JSON array
                                                     sharedPreferencesManager.savePekerja(pekerja)
@@ -496,16 +501,19 @@ class LoginActivity : AppCompatActivity() {
                                                 }
                                             } catch (e: JSONException) {
                                                 Log.e("FetchDataError", "Error parsing JSON: ${e.message}")
+                                                login.revertAnimation()
                                             }
                                         }
                                     } else {
                                         // Handle unsuccessful response
                                         Log.e("FetchDataError", "Failed to fetch data: ${response.code()}")
+                                        login.revertAnimation()
                                     }
                                 }
 
                                 override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
                                     Log.e("FetchDataError", "Failed to fetch data")
+                                    login.revertAnimation()
                                 }
                             })
                             setLoading(false)

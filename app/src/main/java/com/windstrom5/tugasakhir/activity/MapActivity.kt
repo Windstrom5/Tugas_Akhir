@@ -60,6 +60,7 @@ class MapActivity : AppCompatActivity(){
     private lateinit var cardview : CardView
     private lateinit var category: String
     private var role:String ?=null
+    private var holiday:String ?=null
     private var admin : Admin? = null
     private var pekerja : Pekerja? = null
     private var perusahaan: Perusahaan?= null
@@ -170,6 +171,7 @@ class MapActivity : AppCompatActivity(){
                 Bundle.putString("openhour", openhour)
                 Bundle.putString("closehour", closehour)
                 Bundle.putString("address", address)
+                Bundle.putString("holiday", holiday)
                 if(byteArray != null){
                     Bundle.putByteArray("selectedFile", byteArray)
                 }
@@ -185,6 +187,7 @@ class MapActivity : AppCompatActivity(){
                 Bundle.putString("openhour", openhour)
                 Bundle.putString("closehour", closehour)
                 Bundle.putString("address", address)
+                Bundle.putString("holiday", holiday)
                 if(byteArray != null){
                     Bundle.putByteArray("selectedFile", byteArray)
                 }
@@ -351,6 +354,7 @@ class MapActivity : AppCompatActivity(){
                     namaPerusahaan = it.getString("namaPerusahaan") ?: ""
                     openhour = it.getString("openhour") ?: ""
                     closehour = it.getString("closehour") ?: ""
+                    holiday = it.getString("holiday") ?: ""
                     if(role == "Admin"){
                         admin = it.getParcelable("user")
                     }else{
@@ -362,6 +366,8 @@ class MapActivity : AppCompatActivity(){
                     openhour = it.getString("openhour") ?: ""
                     closehour = it.getString("closehour") ?: ""
                     byteArray = intent.getByteArrayExtra("selectedFile")
+                    holiday = it.getString("holiday") ?: ""
+
                 }
             }
         } else {

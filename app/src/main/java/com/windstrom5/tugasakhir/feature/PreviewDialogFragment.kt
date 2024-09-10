@@ -299,8 +299,6 @@ class PreviewDialogFragment: DialogFragment() {
                 view.findViewById<Button>(R.id.rejectButton).setOnClickListener {
                     updateStatus("Reject", "Lembur")
                 }
-            }else if(category == "Edit"){
-
             }else if(category == "session_pekerja"){
                 val (sessions, closestSessionIndex) = calculateSessions(lembur!!.waktu_masuk, lembur!!.waktu_pulang)
 

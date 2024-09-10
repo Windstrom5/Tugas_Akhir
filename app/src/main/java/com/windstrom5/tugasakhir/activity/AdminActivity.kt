@@ -261,7 +261,8 @@ class AdminActivity : AppCompatActivity() {
                         jam_keluar = jamKeluar,
                         batasAktif = batasAktifSqlDate,
                         logo = if (perusahaanJson.has("logo")) perusahaanJson.getString("logo") else null,
-                        secret_key = perusahaanJson.getString("secret_key")
+                        secret_key = perusahaanJson.getString("secret_key"),
+                        holiday = perusahaanJson.getString("holiday")
                     )
 
                     val user = response.getJSONObject("user")
@@ -766,7 +767,7 @@ class AdminActivity : AppCompatActivity() {
 //                    .into(imageView)
 //            }
             else -> {
-                weather = "Unknown"
+                weather = weatherDesc
                 Glide.with(this)
                     .load(R.drawable.baseline_emoji_people_24)
                     .into(imageView)
@@ -960,6 +961,7 @@ class AdminActivity : AppCompatActivity() {
             bundle?.let {
                 perusahaan = it.getParcelable("perusahaan")
                 admin = it.getParcelable("user")
+                Log.d("ApiResponse",perusahaan.toString())
             }
             val url =
                 "http://192.168.1.6:8000/api/Admin/decryptProfile/${admin?.id}" // Replace with your actual URL

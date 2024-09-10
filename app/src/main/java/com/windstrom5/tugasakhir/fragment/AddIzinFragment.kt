@@ -29,6 +29,9 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
 import androidx.fragment.app.Fragment
 import br.com.simplepass.loading_button_lib.customViews.CircularProgressButton
+import com.android.volley.Request
+import com.android.volley.toolbox.JsonArrayRequest
+import com.android.volley.toolbox.Volley
 import com.bumptech.glide.Glide
 import com.github.barteksc.pdfviewer.PDFView
 import com.google.android.material.textfield.TextInputLayout
@@ -75,6 +78,7 @@ class AddIzinFragment : Fragment() {
     private lateinit var selectedFile: File
     private val PDF_REQUEST_CODE = 123
     private val PICK_PDF_OR_IMAGE_REQUEST_CODE = 100
+    private var holidaysMap: MutableMap<Calendar, String> = mutableMapOf()
     private var izinKerjaOptions: List<String> =
         mutableListOf("Sakit", "Cuti", "Izin Khusus", "Pendidikan", "Liburan", "Keperluan Pribadi", "Kegiatan Keluarga", "Ibadah");
     override fun onCreateView(
@@ -87,6 +91,7 @@ class AddIzinFragment : Fragment() {
         super.onCreate(savedInstanceState)
         TINama = view.findViewById(R.id.nama)
         getBundle()
+        fetchHolidayData()
         save = view.findViewById(R.id.submitButton)
         TITanggal = view.findViewById(R.id.TITanggal)
         acIzin = view.findViewById(R.id.acizin)
@@ -159,70 +164,128 @@ class AddIzinFragment : Fragment() {
         }
     }
 
-    private fun showDatePickerDialog(editText: EditText) {
-        // Load holidays from JSON
-        val holidaysMap = loadHolidaysFromJson(requireContext())
+    private fun showDatePickerDialog(editText: EditText?) {
+        // Prepare to fetch holiday data if "Nasional" is present
+        if (perusahaan?.holiday?.contains("Nasional") == true) {
+            fetchHolidayData()
+        }
 
-        val disabledDays = holidaysMap.keys.toTypedArray()
+        // Extract weekdays to disable based on company holidays
+        val disabledWeekdays = mutableSetOf<Int>()
+        perusahaan?.holiday?.split(",\\s*".toRegex())?.forEach { day ->
+            when (day.trim().lowercase()) {
+                "senin" -> disabledWeekdays.add(Calendar.MONDAY)
+                "selasa" -> disabledWeekdays.add(Calendar.TUESDAY)
+                "rabu" -> disabledWeekdays.add(Calendar.WEDNESDAY)
+                "kamis" -> disabledWeekdays.add(Calendar.THURSDAY)
+                "jumat" -> disabledWeekdays.add(Calendar.FRIDAY)
+                "sabtu" -> disabledWeekdays.add(Calendar.SATURDAY)
+                "minggu" -> disabledWeekdays.add(Calendar.SUNDAY)
+            }
+        }
 
         val now = Calendar.getInstance()
+        val disabledDates = mutableListOf<Calendar>()
 
+        // Generate disabled dates for the entire year
+        val startOfYear = Calendar.getInstance().apply {
+            set(Calendar.DAY_OF_YEAR, 1)
+        }
+        val endOfYear = Calendar.getInstance().apply {
+            add(Calendar.YEAR, 1)
+            set(Calendar.DAY_OF_YEAR, 1)
+            add(Calendar.DAY_OF_YEAR, -1)
+        }
+
+        var current = startOfYear.clone() as Calendar
+        while (current.before(endOfYear)) {
+            // Add disabled weekdays
+            if (disabledWeekdays.contains(current.get(Calendar.DAY_OF_WEEK))) {
+                disabledDates.add(current.clone() as Calendar)
+            }
+
+            // Add national holidays
+            holidaysMap.keys.forEach { holidayCalendar ->
+                if (current.get(Calendar.YEAR) == holidayCalendar.get(Calendar.YEAR) &&
+                    current.get(Calendar.MONTH) == holidayCalendar.get(Calendar.MONTH) &&
+                    current.get(Calendar.DAY_OF_MONTH) == holidayCalendar.get(Calendar.DAY_OF_MONTH)) {
+                    disabledDates.add(current.clone() as Calendar)
+                }
+            }
+
+            current.add(Calendar.DAY_OF_MONTH, 1)
+        }
+
+        // Set up the DatePickerDialog
         val dpd = DatePickerDialog.newInstance(
-            DatePickerDialog.OnDateSetListener { _, year, monthOfYear, dayOfMonth ->
+            { _, year, monthOfYear, dayOfMonth ->
                 val selectedDate = Calendar.getInstance().apply {
                     set(year, monthOfYear, dayOfMonth)
                 }
 
                 // Check if the selected date is a holiday
-                if (holidaysMap.containsKey(selectedDate)) {
-                    // Show Toast
-                    Toast.makeText(
-                        requireContext(),
-                        "Selected date is a holiday. Please choose another date.",
-                        Toast.LENGTH_LONG
-                    ).show()
-                } else {
-                    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                    val formattedDate = dateFormat.format(selectedDate.time)
-                    editText.setText(formattedDate)
+                holidaysMap.forEach { holidayCalendar, holidayName ->
+                    if (holidayCalendar.get(Calendar.YEAR) == selectedDate.get(Calendar.YEAR) &&
+                        holidayCalendar.get(Calendar.MONTH) == selectedDate.get(Calendar.MONTH) &&
+                        holidayCalendar.get(Calendar.DAY_OF_MONTH) == selectedDate.get(Calendar.DAY_OF_MONTH)) {
+
+                        Toast.makeText(
+                            requireContext(),
+                            "Tanggal yang dipilih adalah hari libur: $holidayName. Silakan pilih tanggal lain.",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
                 }
+
+                // Format the date in Indonesian style (e.g., 20 Agustus 2024)
+                val dateFormat = SimpleDateFormat("dd MMMM yyyy", Locale("id", "ID"))
+                val formattedDate = dateFormat.format(selectedDate.time)
+                editText?.setText(formattedDate)
             },
             now.get(Calendar.YEAR),
             now.get(Calendar.MONTH),
             now.get(Calendar.DAY_OF_MONTH)
         )
 
-        dpd.setDisabledDays(disabledDays)
+        // Disable past days
+        dpd.minDate = now
+
+        // Disable specific weekdays and holidays
+        dpd.setDisabledDays(disabledDates.toTypedArray())
+
         dpd.show(childFragmentManager, "DatePickerDialog")
     }
 
-    private fun loadHolidaysFromJson(context: Context): Map<Calendar, String> {
-        val holidaysMap = mutableMapOf<Calendar, String>()
 
-        try {
-            val inputStream: InputStream = context.resources.openRawResource(R.raw.holidays)
-            val jsonString = inputStream.bufferedReader().use { it.readText() }
-            val jsonObject = JSONObject(jsonString)
+    private fun fetchHolidayData() {
+        val currentYear = Calendar.getInstance().get(Calendar.YEAR)
+        val url = "https://dayoffapi.vercel.app/api?year=$currentYear"
 
-            // Iterate through the keys (dates) in the JSON object
-            for (key in jsonObject.keys()) {
-                val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                val date = Calendar.getInstance().apply {
-                    time = dateFormat.parse(key) ?: Date()
+        val jsonArrayRequest = JsonArrayRequest(
+            Request.Method.GET, url, null,
+            { response ->
+                holidaysMap.clear() // Clear previous data
+
+                for (i in 0 until response.length()) {
+                    val holidayObject = response.getJSONObject(i)
+                    val date = holidayObject.getString("tanggal")
+                    val description = holidayObject.getString("keterangan")
+
+                    // Parse date string into Calendar object
+                    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                    val holidayDate = Calendar.getInstance().apply {
+                        time = dateFormat.parse(date)
+                    }
+
+                    holidaysMap[holidayDate] = description
                 }
-                val dateObject = jsonObject.getJSONObject(key)
-                val summary = dateObject.getString("summary")
-
-                // Add the date and summary to the map
-                holidaysMap[date] = summary
-                Log.d("A", "Holiday: Date = $key, Summary = $summary")
+            },
+            { error ->
+                error.printStackTrace()
             }
+        )
 
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-
-        return holidaysMap
+        Volley.newRequestQueue(requireContext()).add(jsonArrayRequest)
     }
     private fun vectorToBitmap(vectorDrawable: Drawable): Bitmap {
         val bitmap = Bitmap.createBitmap(vectorDrawable.intrinsicWidth,

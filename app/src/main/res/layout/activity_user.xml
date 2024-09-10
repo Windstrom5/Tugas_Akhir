@@ -187,7 +187,7 @@
                         android:layout_height="wrap_content"
                         android:foregroundGravity="center"
                         android:gravity="center"
-                        android:text="Fitur Admin"
+                        android:text="Fitur Pekerja"
                         android:textAllCaps="true"
                         android:textColor="@color/common_google_signin_btn_text_dark_focused"
                         android:textSize="20sp"

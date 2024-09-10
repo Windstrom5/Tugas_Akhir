@@ -33,6 +33,21 @@ class SharedPreferencesManager(context: Context) {
         editor.remove("presensi")
         editor.apply()
     }
+    fun removeAdmin() {
+        val editor = sharedPreferences.edit()
+        editor.remove("admin")
+        editor.apply()
+    }
+    fun removePekerja() {
+        val editor = sharedPreferences.edit()
+        editor.remove("pekerja")
+        editor.apply()
+    }
+    fun removePerusahaan() {
+        val editor = sharedPreferences.edit()
+        editor.remove("perusahaan")
+        editor.apply()
+    }
     fun clearUserData() {
         val editor = sharedPreferences.edit()
         editor.remove("pekerja")

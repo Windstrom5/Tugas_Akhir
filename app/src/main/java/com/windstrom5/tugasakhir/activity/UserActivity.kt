@@ -12,6 +12,7 @@ import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import android.widget.Button
+import android.widget.FrameLayout
 import android.widget.HorizontalScrollView
 import android.widget.ImageButton
 import android.widget.ImageView
@@ -537,7 +538,7 @@ class UserActivity : AppCompatActivity() {
         return intersectionSize.toDouble() / unionSize.toDouble()
     }
 
-    private fun fetchWeatherData(location:String) {
+    private fun fetchWeatherData(location: String) {
         val url = "https://wttr.in/${location}?format=j1"
 
         val stringRequest = StringRequest(
@@ -550,6 +551,7 @@ class UserActivity : AppCompatActivity() {
                 } catch (e: Exception) {
                     e.printStackTrace()
                     Toast.makeText(this, "Failed to parse weather data.", Toast.LENGTH_SHORT).show()
+                    fetchHolidayData()
                 }
             },
             { error ->
@@ -563,11 +565,14 @@ class UserActivity : AppCompatActivity() {
                         processWeatherData(jsonResponse)
                     } catch (e: Exception) {
                         e.printStackTrace()
-                        Toast.makeText(this, "Failed to parse weather data.", Toast.LENGTH_SHORT).show()
+                        fetchHolidayData()
+                        Toast.makeText(this, "Failed to parse weather data.", Toast.LENGTH_SHORT)
+                            .show()
                     }
                 } else {
                     error.printStackTrace()
                     Toast.makeText(this, "Unable to fetch weather data.", Toast.LENGTH_SHORT).show()
+                    fetchHolidayData()
                 }
             }
         )
@@ -582,36 +587,42 @@ class UserActivity : AppCompatActivity() {
                     .load(R.drawable.sunny)
                     .into(imageView)
             }
+
             weatherDesc.contains("Partly cloudy", ignoreCase = true) -> {
                 weather = "Partly Cloudy"
                 Glide.with(this)
                     .load(R.drawable.sunnycloudy)
                     .into(imageView)
             }
+
             weatherDesc.contains("Cloudy", ignoreCase = true) -> {
                 weather = "Cloudy"
                 Glide.with(this)
                     .load(R.drawable.cloudy)
                     .into(imageView)
             }
+
             weatherDesc.contains("Overcast", ignoreCase = true) -> {
                 weather = "Overcast"
                 Glide.with(this)
                     .load(R.drawable.cloudy)
                     .into(imageView)
             }
+
             weatherDesc.contains("Rain", ignoreCase = true) -> {
                 weather = "Rain"
                 Glide.with(this)
                     .load(R.drawable.rain)
                     .into(imageView)
             }
+
             weatherDesc.contains("Thunderstorm", ignoreCase = true) -> {
                 weather = "Thunderstorm"
                 Glide.with(this)
                     .load(R.drawable.storm)
                     .into(imageView)
             }
+
             weatherDesc.contains("Sunny", ignoreCase = true) -> {
                 weather = "Sunny"
                 Glide.with(this)
@@ -636,12 +647,12 @@ class UserActivity : AppCompatActivity() {
 //                    .load(R.drawable.fog)
 //                    .into(imageView)
 //            }
-//            else -> {
-//                weather = "Unknown"
-//                Glide.with(this)
-//                    .load(R.drawable.unknown)
-//                    .into(imageView)
-//            }
+            else -> {
+                weather = weatherDesc
+                Glide.with(this)
+                    .load(R.drawable.baseline_emoji_people_24)
+                    .into(imageView)
+            }
         }
         Log.d("weather", weather!!)
     }
@@ -662,9 +673,6 @@ class UserActivity : AppCompatActivity() {
         // Update UI based on weather description
         updateWeatherIcon(weatherDesc)
     }
-
-
-
 
     private fun fetchHolidayData() {
         val currentYear = Calendar.getInstance().get(Calendar.YEAR)
@@ -698,19 +706,38 @@ class UserActivity : AppCompatActivity() {
                 break
             }
         }
+        val quotes: Map<String, String> // Declare the quotes variable outside the if-else block
         weather?.let { Log.d("weather", it) }
         if (!isHoliday) {
             val dayName =
                 SimpleDateFormat("EEEE", Locale.getDefault()).format(Calendar.getInstance().time)
-            val quotes = mapOf(
-                "Monday" to "$weather Monday ${pekerja?.nama}! Start your week with a smile!",
-                "Tuesday" to "It's a $weather Tuesday ${pekerja?.nama}! Keep going strong!",
-                "Wednesday" to "Wonderful $weather Wednesday ${pekerja?.nama}! You're halfway there!",
-                "Thursday" to "Thrilling $weather Thursday ${pekerja?.nama}! Almost the weekend!",
-                "Friday" to "Fantastic $weather Friday ${pekerja?.nama}! Enjoy the day!",
-                "Saturday" to "Superb $weather Saturday ${pekerja?.nama}! Have a great weekend!",
-                "Sunday" to "Relaxing $weather Sunday ${pekerja?.nama}! Rest and recharge!"
-            )
+            val view : FrameLayout = binding.view
+            view.visibility = View.VISIBLE
+            if(weather == null ){
+                quotes = mapOf(
+                    "Monday" to "Happy Monday ${pekerja?.nama}! Start your week with a smile!",
+                    "Tuesday" to "It's a Tuesday ${pekerja?.nama}! Keep going strong!",
+                    "Wednesday" to "Wonderful Wednesday ${pekerja?.nama}! You're halfway there!",
+                    "Thursday" to "Thrilling Thursday ${pekerja?.nama}! Almost the weekend!",
+                    "Friday" to "Fantastic Friday ${pekerja?.nama}! Enjoy the day!",
+                    "Saturday" to "Superb Saturday ${pekerja?.nama}! Have a great weekend!",
+                    "Sunday" to "Relaxing Sunday ${pekerja?.nama}! Rest and recharge!"
+                )
+                location.setText(currentLocation)
+                Glide.with(this)
+                    .load(R.drawable.baseline_emoji_people_24)
+                    .into(imageView)
+            }else{
+                quotes = mapOf(
+                    "Monday" to "$weather Monday ${pekerja?.nama}! Start your week with a smile!",
+                    "Tuesday" to "It's a $weather Tuesday ${pekerja?.nama}! Keep going strong!",
+                    "Wednesday" to "Wonderful $weather Wednesday ${pekerja?.nama}! You're halfway there!",
+                    "Thursday" to "Thrilling $weather Thursday ${pekerja?.nama}! Almost the weekend!",
+                    "Friday" to "Fantastic $weather Friday ${pekerja?.nama}! Enjoy the day!",
+                    "Saturday" to "Superb $weather Saturday ${pekerja?.nama}! Have a great weekend!",
+                    "Sunday" to "Relaxing $weather Sunday ${pekerja?.nama}! Rest and recharge!"
+                )
+            }
             day.text = dayName
             quoteOfTheDay.text = quotes[dayName] ?: "Have a great day!"
         }
@@ -801,6 +828,7 @@ class UserActivity : AppCompatActivity() {
     private fun startActivityWithExtras(intent: Intent) {
         val userBundle = Bundle()
         userBundle.putParcelable("user", pekerja)
+        Log.d("Role",pekerja.toString())
         userBundle.putParcelable("perusahaan", perusahaan)
         userBundle.putString("role", "Pekerja")
         intent.putExtra("data", userBundle)

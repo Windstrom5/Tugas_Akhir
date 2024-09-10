@@ -3,6 +3,7 @@ package com.windstrom5.tugasakhir.adapter
 import android.app.Dialog
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.os.Bundle
 import android.os.Parcelable
 import android.util.Log
@@ -10,7 +11,10 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.AdapterView.OnItemClickListener
+import android.widget.ImageView
 import androidx.recyclerview.widget.RecyclerView
+import com.android.volley.toolbox.ImageRequest
+import com.android.volley.toolbox.Volley
 import com.bumptech.glide.Glide
 import com.saadahmedev.popupdialog.PopupDialog
 import com.windstrom5.tugasakhir.R
@@ -47,10 +51,30 @@ class ListAnggotaAdapter(
 
         fun bind(currentPekerja: Pekerja) {
             // Set data to views for Pekerja
-            if(currentPekerja.profile!= "null"){
-                Glide.with(binding.profileImageView.context)
-                    .load("http://192.168.1.6:8000/api/Pekerja/decryptProfile/${currentPekerja.id}")
-                    .into(binding.profileImageView)
+            if (currentPekerja.profile != "null") {
+                val url = "http://192.168.1.6:8000/api/Pekerja/decryptProfile/${currentPekerja.id}"
+
+                // Create an ImageRequest to fetch the profile image
+                val imageRequest = ImageRequest(
+                    url,
+                    { response ->
+                        // Set the Bitmap to the ImageView if the request is successful
+                        binding.profileImageView.setImageBitmap(response)
+                    },
+                    0, 0, ImageView.ScaleType.CENTER_CROP, Bitmap.Config.RGB_565,
+                    { error ->
+                        // Log or handle the error if the image request fails
+                        error.printStackTrace()
+                        // Load a default image if there is an error
+                        Glide.with(binding.profileImageView.context)
+                            .load(R.drawable.profile)
+                            .into(binding.profileImageView)
+                    }
+                )
+
+                // Add the request to the Volley request queue
+                val requestQueue = Volley.newRequestQueue(binding.profileImageView.context)
+                requestQueue.add(imageRequest)
             }else{
                 Glide.with(binding.profileImageView.context)
                     .load(R.drawable.profile)
@@ -79,10 +103,30 @@ class ListAnggotaAdapter(
 
         fun bind(currentAdmin: Admin) {
             // Set data to views for Admin
-            if (currentAdmin.profile!= "null") {
-                Glide.with(binding.profileImageView.context)
-                    .load("http://192.168.1.6:8000/api/Admin/decryptProfile/${currentAdmin.id}")
-                    .into(binding.profileImageView)
+            if (currentAdmin.profile != "null") {
+                val url = "http://192.168.1.6:8000/api/Admin/decryptProfile/${currentAdmin.id}"
+
+                // Create an ImageRequest to fetch the profile image
+                val imageRequest = ImageRequest(
+                    url,
+                    { response ->
+                        // Set the Bitmap to the ImageView if the request is successful
+                        binding.profileImageView.setImageBitmap(response)
+                    },
+                    0, 0, ImageView.ScaleType.CENTER_CROP, Bitmap.Config.RGB_565,
+                    { error ->
+                        // Log or handle the error if the image request fails
+                        error.printStackTrace()
+                        // Load a default image if there is an error
+                        Glide.with(binding.profileImageView.context)
+                            .load(R.drawable.profile)
+                            .into(binding.profileImageView)
+                    }
+                )
+
+                // Add the request to the Volley request queue
+                val requestQueue = Volley.newRequestQueue(binding.profileImageView.context)
+                requestQueue.add(imageRequest)
             } else {
                 Glide.with(binding.profileImageView.context)
                     .load(R.drawable.profile)

@@ -98,6 +98,18 @@ class ScanAbsensiFragment : Fragment() {
     private lateinit var textView: TextView
     private lateinit var lottie: LottieAnimationView
     private lateinit var scannerView: CodeScannerView
+    private val holidaysMap = mutableMapOf<Calendar, String>()
+    private val selectedDays = mutableListOf<String>()
+    private val dayTranslations = mapOf(
+        "Senin" to "Monday",
+        "Selasa" to "Tuesday",
+        "Rabu" to "Wednesday",
+        "Kamis" to "Thursday",
+        "Jumat" to "Friday",
+        "Sabtu" to "Saturday",
+        "Minggu" to "Sunday"
+    )
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -108,7 +120,31 @@ class ScanAbsensiFragment : Fragment() {
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
             if (isGranted) {
                 // Permission is granted. Start the service.
-                startTrackingService()
+//                startTrackingService()
+                if (isTodayHolidayOrSelectedDay()) {
+                    codeScanner?.stopPreview()
+                    scannerView.visibility = View.GONE
+                    lottie.repeatCount = LottieDrawable.INFINITE
+                    lottie.setAnimation(R.raw.freeday)
+                    lottie.visibility = View.VISIBLE
+                    lottie.playAnimation()
+                    Toast.makeText(requireContext(), "Today is a holiday. Scanning is disabled.", Toast.LENGTH_LONG).show()
+                }else {
+                    codeScanner?.apply {
+                        camera = CodeScanner.CAMERA_BACK
+                        formats = CodeScanner.ALL_FORMATS
+                        autoFocusMode = AutoFocusMode.SAFE
+                        scanMode = ScanMode.SINGLE
+                        isAutoFocusEnabled = true
+                        isFlashEnabled = false
+                    }
+                    codeScanner?.decodeCallback = DecodeCallback {
+                        activity?.runOnUiThread {
+                            getAllSecretKeysFromApi(it.text)
+                        }
+                    }
+                    codeScanner?.startPreview()
+                }
             } else {
                 // Permission is denied. Handle the denial.
                 Toast.makeText(requireContext(), "Notification permission denied", Toast.LENGTH_SHORT).show()
@@ -116,9 +152,10 @@ class ScanAbsensiFragment : Fragment() {
         }
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        checkLocationPermission()
         lottie = view.findViewById(R.id.lottie)
         textView = view.findViewById(R.id.textView)
+        fetchHolidayData()
+        checkLocationPermission()
         scannerView = view.findViewById(R.id.scanner_view)
         textView.setText("Put The QR Code Inside The Box")
         codeScanner = CodeScanner(requireActivity(), scannerView)
@@ -142,12 +179,40 @@ class ScanAbsensiFragment : Fragment() {
                 .load(imageUrl)
                 .into(logo)
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(
-                    requireContext(),
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) == PackageManager.PERMISSION_GRANTED
-            ) {
+        if (isTodayHolidayOrSelectedDay()) {
+            codeScanner?.stopPreview()
+            scannerView.visibility = View.GONE
+            lottie.repeatCount = LottieDrawable.INFINITE
+            lottie.setAnimation(R.raw.freeday)
+            lottie.visibility = View.VISIBLE
+            lottie.playAnimation()
+            Toast.makeText(requireContext(), "Today is a holiday. Scanning is disabled.", Toast.LENGTH_LONG).show()
+        } else {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                if (ContextCompat.checkSelfPermission(
+                        requireContext(),
+                        Manifest.permission.POST_NOTIFICATIONS
+                    ) == PackageManager.PERMISSION_GRANTED
+                ) {
+                    codeScanner?.apply {
+                        camera = CodeScanner.CAMERA_BACK
+                        formats = CodeScanner.ALL_FORMATS
+                        autoFocusMode = AutoFocusMode.SAFE
+                        scanMode = ScanMode.SINGLE
+                        isAutoFocusEnabled = true
+                        isFlashEnabled = false
+                    }
+                    codeScanner?.decodeCallback = DecodeCallback {
+                        activity?.runOnUiThread {
+                            getAllSecretKeysFromApi(it.text)
+                        }
+                    }
+                    codeScanner?.startPreview()
+                } else {
+                    // Request the permission
+                    requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+            } else {
                 codeScanner?.apply {
                     camera = CodeScanner.CAMERA_BACK
                     formats = CodeScanner.ALL_FORMATS
@@ -162,29 +227,70 @@ class ScanAbsensiFragment : Fragment() {
                     }
                 }
                 codeScanner?.startPreview()
-            } else {
-                // Request the permission
-                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
-        } else {
-            codeScanner?.apply {
-                camera = CodeScanner.CAMERA_BACK
-                formats = CodeScanner.ALL_FORMATS
-                autoFocusMode = AutoFocusMode.SAFE
-                scanMode = ScanMode.SINGLE
-                isAutoFocusEnabled = true
-                isFlashEnabled = false
-            }
-            codeScanner?.decodeCallback = DecodeCallback {
-                activity?.runOnUiThread {
-                    getAllSecretKeysFromApi(it.text)
-                }
-            }
-            codeScanner?.startPreview()
         }
-
     }
+    private fun fetchHolidayData() {
+        val currentYear = Calendar.getInstance().get(Calendar.YEAR)
+        val url = "https://dayoffapi.vercel.app/api?year=$currentYear"
 
+        val jsonArrayRequest = JsonArrayRequest(
+            Request.Method.GET, url, null,
+            { response ->
+                holidaysMap.clear() // Clear previous data
+
+                for (i in 0 until response.length()) {
+                    val holidayObject = response.getJSONObject(i)
+                    val date = holidayObject.getString("tanggal")
+                    val description = holidayObject.getString("keterangan")
+
+                    // Parse date string into Calendar object
+                    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                    val holidayDate = Calendar.getInstance().apply {
+                        time = dateFormat.parse(date)
+                    }
+
+                    holidaysMap[holidayDate] = description
+                }
+            },
+            { error ->
+                error.printStackTrace()
+            }
+        )
+
+        Volley.newRequestQueue(requireContext()).add(jsonArrayRequest)
+    }
+    private fun isTodayHolidayOrSelectedDay(): Boolean {
+        val today = Calendar.getInstance()
+        val dayName = SimpleDateFormat("EEEE", Locale("id", "ID")).format(today.time)  // "EEEE" gives the full day name
+
+        Log.d("Holiday", "Today is $dayName")
+        Log.d("Holiday", "Selected days: $selectedDays")
+
+        val isHoliday = selectedDays.any { it.equals(dayName, ignoreCase = true) }
+        val isNationalHoliday = isTodayNationalHoliday()
+        if(isHoliday){
+            textView.text = "Today is a company holiday: $dayName. Enjoy your day off!"
+        }
+        Log.d("HolidayCheck", "Is today a selected holiday? $isHoliday")
+        Log.d("HolidayCheck", "Is today a national holiday? $isNationalHoliday")
+
+        return isHoliday || isNationalHoliday
+    }
+    private fun isTodayNationalHoliday(): Boolean {
+        val today = Calendar.getInstance()
+
+        // Check if today is in the holidaysMap
+        holidaysMap.forEach { (date, description) ->
+            if (today.get(Calendar.YEAR) == date.get(Calendar.YEAR) &&
+                today.get(Calendar.MONTH) == date.get(Calendar.MONTH) &&
+                today.get(Calendar.DAY_OF_MONTH) == date.get(Calendar.DAY_OF_MONTH)) {
+                textView.text = "Today is a national holiday: $description. Enjoy your day!"
+                return true
+            }
+        }
+        return false
+    }
     private fun checkLocationPermission() {
         if (ContextCompat.checkSelfPermission(
                 requireContext(),
@@ -474,6 +580,12 @@ class ScanAbsensiFragment : Fragment() {
         if (arguments != null) {
             perusahaan = arguments.getParcelable("perusahaan")
             pekerja = arguments.getParcelable("user")
+            selectedDays.clear()
+            val holiday = perusahaan?.holiday
+            if (holiday != null) {
+                selectedDays.addAll(holiday.split(",\\s*".toRegex()).map { it.trim() })
+            }
+            Log.d("Holiday",perusahaan.toString())
         } else {
             Log.d("Error","Bundle Not Found")
         }

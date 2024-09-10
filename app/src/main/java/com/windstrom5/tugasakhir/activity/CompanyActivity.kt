@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import com.windstrom5.tugasakhir.connection.SharedPreferencesManager
 import android.app.ProgressDialog
 import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.Color
 import android.os.Bundle
 import android.os.Handler
@@ -13,6 +14,7 @@ import android.view.View
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.GridLayoutManager
@@ -20,6 +22,7 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.android.volley.Request
 import com.android.volley.RequestQueue
+import com.android.volley.toolbox.ImageRequest
 import com.android.volley.toolbox.JsonObjectRequest
 import com.android.volley.toolbox.Volley
 import com.bumptech.glide.Glide
@@ -71,6 +74,7 @@ class CompanyActivity : AppCompatActivity() {
     private lateinit var countpekerja : TextView
     private lateinit var countadmin : TextView
     private lateinit var address : TextView
+    private lateinit var namaTv : TextView
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityCompanyBinding.inflate(layoutInflater)
@@ -78,6 +82,7 @@ class CompanyActivity : AppCompatActivity() {
         addPekerja = binding.addPekerja
         setting = binding.setting
         address = binding.tvAddress
+        namaTv = binding.tvName
         getBundle()
         recyclerView = findViewById(R.id.recyclerViewPekerja)
         adapter =
@@ -280,6 +285,7 @@ class CompanyActivity : AppCompatActivity() {
                                     if (perusahaanObject != null) {
                                         val id = perusahaanObject.optInt("id")
                                         val nama = perusahaanObject.getString("nama")
+                                        namaTv.setText(nama)
                                         val latitude = perusahaanObject.getDouble("latitude")
                                         val longitude = perusahaanObject.getDouble("longitude")
                                         val addressInfo = ReverseGeocoder.getAddressFromLocation(this@CompanyActivity, GeoPoint(latitude, longitude))
@@ -298,7 +304,8 @@ class CompanyActivity : AppCompatActivity() {
                                         val batasAktif = java.sql.Date.valueOf(batasAktifString) // Use java.sql.Date for consistency
                                         val logo = perusahaanObject.getString("logo")
                                         val secretKey = perusahaanObject.getString("secret_key")
-                                        Perusahaan(id, nama, latitude, longitude, jamMasuk, jamKeluar, batasAktif, logo, secretKey)
+                                        val holiday = perusahaanObject.getString("holiday")
+                                        Perusahaan(id, nama, latitude, longitude, jamMasuk, jamKeluar, batasAktif, logo, secretKey,holiday)
                                     } else {
                                         null
                                     }
@@ -389,6 +396,7 @@ class CompanyActivity : AppCompatActivity() {
         if (bundle != null) {
             bundle?.let {
                 perusahaan = it.getParcelable("perusahaan")
+                namaTv.setText(perusahaan?.nama)
                 role = it.getString("role").toString()
                 if(role == "Admin"){
                     admin = it.getParcelable("user")
@@ -410,13 +418,22 @@ class CompanyActivity : AppCompatActivity() {
                 }
                 if (perusahaan?.logo != "null") {
                     val imageUrl =
-                        "http://192.168.1.6:8000/api/Perusahaan/decryptLogo/${perusahaan?.id}" // Replace with your Laravel image URL
-                    val profileImageView = binding.circleImageView
-                    val text = binding.tvName
-                    text.setText(perusahaan?.nama)
-                    Glide.with(this)
-                        .load(imageUrl)
-                        .into(profileImageView)
+                        "http://192.168.1.6:8000/api/Perusahaan/decryptLogo/${perusahaan?.id}"
+                    val imageRequest = ImageRequest(
+                        imageUrl,
+                        { response ->
+                            // Set the Bitmap to an ImageView or handle it as needed
+                            val profileImageView = binding.circleImageView
+                            profileImageView.setImageBitmap(response)
+                        },
+                        0, 0, ImageView.ScaleType.CENTER_CROP, Bitmap.Config.RGB_565,
+                        { error ->
+                            error.printStackTrace()
+                            Toast.makeText(this, "Failed to fetch profile image", Toast.LENGTH_SHORT).show()
+                        }
+                    )
+                    val requestQueue = Volley.newRequestQueue(this)
+                    requestQueue.add(imageRequest)
                 }else{
                     val profileImageView = binding.circleImageView
                     Glide.with(this)

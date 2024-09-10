@@ -108,6 +108,27 @@
                             android:enabled="false"
                             android:maxLines="1" />
                     </com.google.android.material.textfield.TextInputLayout>
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/holiday"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                        android:layout_marginTop="@dimen/loginViewsMargin"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+
+                        <AutoCompleteTextView
+                            android:id="@+id/acholiday"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            style="@style/modifiedEditText"
+                            android:background="#E5E4E2"
+                            android:textColorHint="@color/primaryTextColor"
+                            android:textColor="@color/black"
+                            android:inputType="none"
+                            android:backgroundTint="@color/primaryTextColor"
+                            android:hint="Hari Libur"
+                            android:textSize="@dimen/newsMoreTextSize" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
                     <androidx.cardview.widget.CardView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"

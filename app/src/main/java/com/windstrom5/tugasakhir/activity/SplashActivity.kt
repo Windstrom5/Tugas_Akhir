@@ -3,6 +3,7 @@ package com.windstrom5.tugasakhir.activity
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.net.Uri
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
@@ -11,12 +12,14 @@ import android.os.Looper
 import android.provider.Settings
 import android.util.Log
 import android.widget.ImageView
+import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.content.res.ResourcesCompat
 import com.android.volley.Request
 import com.android.volley.RequestQueue
 import com.android.volley.Response
 import com.android.volley.VolleyError
+import com.android.volley.toolbox.ImageRequest
 import com.android.volley.toolbox.JsonObjectRequest
 import com.android.volley.toolbox.Volley
 import com.blogspot.atifsoftwares.animatoolib.Animatoo
@@ -109,7 +112,8 @@ class SplashActivity : AppCompatActivity() {
                         jam_keluar = jamKeluar,
                         batasAktif = batasAktifSqlDate,
                         logo = if (perusahaanJson.has("logo")) perusahaanJson.getString("logo") else null,
-                        secret_key = perusahaanJson.getString("secret_key")
+                        secret_key = perusahaanJson.getString("secret_key"),
+                        holiday = perusahaanJson.getString("holiday")
                     )
 
                     val user = response.getJSONObject("user")
@@ -278,17 +282,31 @@ class SplashActivity : AppCompatActivity() {
                 .load(R.drawable.logo)
                 .into(logoImageView)
         } else {
-            val imageUrl = "http://192.168.1.6:8000/api/Perusahaan/decryptLogo/${perusahaan?.id}"
-            Glide.with(this)
-                .load(imageUrl)
-                .into(logoImageView)
+            val url =
+                "http://192.168.1.6:8000/api/Perusahaan/decryptLogo/${perusahaan?.id}" // Replace with your actual URL
+
+            val imageRequest = ImageRequest(
+                url,
+                { response ->
+                    // Set the Bitmap to an ImageView or handle it as needed
+                    logoImageView.setImageBitmap(response)
+                },
+                0, 0, ImageView.ScaleType.CENTER_CROP, Bitmap.Config.RGB_565,
+                { error ->
+                    error.printStackTrace()
+                    Toast.makeText(this, "Failed to fetch profile image", Toast.LENGTH_SHORT).show()
+                }
+            )
+
+            val requestQueue = Volley.newRequestQueue(this)
+            requestQueue.add(imageRequest)
         }
         if (admin != null) {
             admin.id?.let { fetchDataFromApi(it, "Admin", presensi?.id) }
         }else if(pekerja !=null){
             pekerja.id?.let { fetchDataFromApi(it,"Pekerja",presensi?.id) }
         }
-
+        Log.d("currecnt",savedPerusahaan.toString())
         Handler(Looper.getMainLooper()).postDelayed({
             val intent = if (admin != null) {
                 Intent(this@SplashActivity, AdminActivity::class.java).apply {

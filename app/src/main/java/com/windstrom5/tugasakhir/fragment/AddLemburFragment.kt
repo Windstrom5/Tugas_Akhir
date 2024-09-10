@@ -38,6 +38,9 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.isEmpty
 import br.com.simplepass.loading_button_lib.customViews.CircularProgressButton
+import com.android.volley.Request
+import com.android.volley.toolbox.JsonArrayRequest
+import com.android.volley.toolbox.Volley
 import com.bumptech.glide.Glide
 import com.saadahmedev.popupdialog.PopupDialog
 import com.wdullaer.materialdatetimepicker.date.DatePickerDialog
@@ -47,6 +50,7 @@ import com.windstrom5.tugasakhir.connection.ApiService
 import okhttp3.MediaType
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
+import org.json.JSONArray
 import org.json.JSONObject
 import retrofit2.Call
 import retrofit2.Callback
@@ -78,6 +82,7 @@ class AddLemburFragment : Fragment() {
     private lateinit var selectedFile: File
     private val PICK_IMAGE_REQUEST_CODE = 123
     private var isTIMasukFilled = false
+    private var holidaysMap: MutableMap<Calendar, String> = mutableMapOf()
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -86,6 +91,7 @@ class AddLemburFragment : Fragment() {
         val view = inflater.inflate(R.layout.fragment_add_lembur, container, false)
         TINama = view.findViewById(R.id.nama)
         getBundle()
+        fetchHolidayData()
         TITanggal = view.findViewById(R.id.TITanggal)
         TIMasuk = view.findViewById(R.id.TIMasuk)
         TIPulang = view.findViewById(R.id.TIPulang)
@@ -98,7 +104,9 @@ class AddLemburFragment : Fragment() {
         TIMasuk.setEndIconOnClickListener{
             perusahaan?.let { it1 -> showTimePickerDialog(TIMasuk, it1) }
         }
-
+        TITanggal.setEndIconOnClickListener {
+            showDatePickerDialog(TITanggal.editText)
+        }
         TIPulang.setEndIconOnClickListener {
             if (!isTIMasukFilled) {
                 MotionToast.createToast(requireActivity(), "Error",
@@ -137,20 +145,6 @@ class AddLemburFragment : Fragment() {
             loadingLayout?.visibility = View.INVISIBLE
         }
     }
-//    private val watcher = object : TextWatcher {
-//        override fun beforeTextChanged(charSequence: CharSequence?, start: Int, count: Int, after: Int) {
-//            // Not needed for this example
-//        }
-//
-//        override fun onTextChanged(charSequence: CharSequence?, start: Int, before: Int, count: Int) {
-//            // Not needed for this example
-//        }
-//
-//        override fun afterTextChanged(editable: Editable?) {
-//            // Update the button state whenever a field is changed
-//            save.isEnabled = isAllFieldsFilled()
-//        }
-//    }
     private fun isAllFieldsFilled(): Boolean {
     val missingFields = mutableListOf<String>()
 
@@ -183,70 +177,86 @@ class AddLemburFragment : Fragment() {
     }
     return true
     }
-    private fun showDatePickerDialog(editText: EditText) {
-        // Load holidays from JSON
-        val holidaysMap = loadHolidaysFromJson(requireContext())
 
-        val disabledDays = holidaysMap.keys.toTypedArray()
-
+    private fun showDatePickerDialog(editText: EditText?) {
+        // Get the current date
         val now = Calendar.getInstance()
 
+        // Set up the DatePickerDialog
         val dpd = DatePickerDialog.newInstance(
-            DatePickerDialog.OnDateSetListener { _, year, monthOfYear, dayOfMonth ->
+            { _, year, monthOfYear, dayOfMonth ->
                 val selectedDate = Calendar.getInstance().apply {
                     set(year, monthOfYear, dayOfMonth)
                 }
 
-                // Check if the selected date is a holiday
-                if (holidaysMap.containsKey(selectedDate)) {
-                    // Show Toast
+                // Check if the selected date is in the past
+                if (selectedDate.before(now)) {
                     Toast.makeText(
                         requireContext(),
-                        "Selected date is a holiday. Please choose another date.",
+                        "Tanggal yang dipilih sudah lewat. Silakan pilih tanggal lain.",
                         Toast.LENGTH_LONG
-                    ).show()
-                } else {
-                    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                    val formattedDate = dateFormat.format(selectedDate.time)
-                    editText.setText(formattedDate)
-                }
+                    ).show() }
+
+                // Format the date in Indonesian style (e.g., 20 Agustus 2024)
+                val dateFormat = SimpleDateFormat("dd MMMM yyyy", Locale("id", "ID"))
+                val formattedDate = dateFormat.format(selectedDate.time)
+                editText?.setText(formattedDate)
             },
             now.get(Calendar.YEAR),
             now.get(Calendar.MONTH),
             now.get(Calendar.DAY_OF_MONTH)
         )
 
-        dpd.setDisabledDays(disabledDays)
+        // Disable past days
+        dpd.minDate = now
+
         dpd.show(childFragmentManager, "DatePickerDialog")
     }
 
-    private fun loadHolidaysFromJson(context: Context): Map<Calendar, String> {
-        val holidaysMap = mutableMapOf<Calendar, String>()
+    private fun fetchHolidayData() {
+        val currentYear = Calendar.getInstance().get(Calendar.YEAR)
+        val url = "https://dayoffapi.vercel.app/api?year=$currentYear"
 
-        try {
-            val inputStream: InputStream = context.resources.openRawResource(R.raw.holidays)
-            val jsonString = inputStream.bufferedReader().use { it.readText() }
-            val jsonObject = JSONObject(jsonString)
+        val jsonArrayRequest = JsonArrayRequest(
+            Request.Method.GET, url, null,
+            { response ->
+                holidaysMap.clear() // Clear previous data
 
-            // Iterate through the keys (dates) in the JSON object
-            for (key in jsonObject.keys()) {
-                val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                val date = Calendar.getInstance().apply {
-                    time = dateFormat.parse(key) ?: Date()
+                for (i in 0 until response.length()) {
+                    val holidayObject = response.getJSONObject(i)
+                    val date = holidayObject.getString("tanggal")
+                    val description = holidayObject.getString("keterangan")
+
+                    // Parse date string into Calendar object
+                    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                    val holidayDate = Calendar.getInstance().apply {
+                        time = dateFormat.parse(date)
+                    }
+
+                    holidaysMap[holidayDate] = description
                 }
-                val dateObject = jsonObject.getJSONObject(key)
-                val summary = dateObject.getString("summary")
-
-                // Add the date and summary to the map
-                holidaysMap[date] = summary
-                Log.d("A", "Holiday: Date = $key, Summary = $summary")
+            },
+            { error ->
+                error.printStackTrace()
             }
+        )
 
-        } catch (e: Exception) {
-            e.printStackTrace()
+        Volley.newRequestQueue(requireContext()).add(jsonArrayRequest)
+    }
+
+
+    private fun checkTodayHoliday(holidays: JSONArray) {
+        val today =
+            SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Calendar.getInstance().time)
+        var isHoliday = false
+
+        for (i in 0 until holidays.length()) {
+            val holiday = holidays.getJSONObject(i)
+            if (holiday.getString("tanggal") == today) {
+                isHoliday = true
+                break
+            }
         }
-
-        return holidaysMap
     }
     private fun pickImageFromGallery() {
         val intent = Intent(Intent.ACTION_GET_CONTENT)
@@ -408,7 +418,11 @@ class AddLemburFragment : Fragment() {
         val apiService = retrofit.create(ApiService::class.java)
         val nama_Perusahaan = createPartFromString(perusahaan.nama)
         val nama = createPartFromString(pekerja.nama)
-        val tanggal = createPartFromString(TITanggal.editText?.text.toString())
+        val dateFormat = SimpleDateFormat("dd MMMM yyyy", Locale("id", "ID"))
+        val dateInput = TITanggal.editText?.text.toString()
+        val parsedDate = dateFormat.parse(dateInput)
+        val sqlDate = Date(parsedDate?.time ?: 0)
+        val tanggal = createPartFromString(sqlDate.toString()) // Convert back to SQL date format
         val waktu_masuk = createPartFromString(TIMasuk.editText?.text.toString())
         val waktu_pulang = createPartFromString(TIPulang.editText?.text.toString())
         val kegiatan = createPartFromString(TIPekerjaan.editText?.text.toString())

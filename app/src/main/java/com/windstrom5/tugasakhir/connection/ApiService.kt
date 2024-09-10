@@ -111,7 +111,7 @@ interface ApiService {
     fun getDataDinasPerusahaan(
         @Path("nama_perusahaan") nama_perusahaan: String
     ): Call<ResponseBody>
-    @GET("PresensigetDataAbsenPekerja/{nama_perusahaan}/{nama_pekerja}")
+    @GET("Presensi/getDataAbsenPekerja/{nama_perusahaan}/{nama_pekerja}")
     fun getDataAbsenPekerja(
         @Path("nama_perusahaan") nama_perusahaan: String,
         @Path("nama_pekerja") nama_pekerja: String
@@ -212,15 +212,6 @@ interface ApiService {
         @Part profile: MultipartBody.Part?
     ): Call<ApiResponse>
 
-
-    @Multipart
-    @POST("Perusahaan/UpdateDataAdmin/{id}?_method=PUT")
-    fun updateAdminNoFile(
-        @Part("id") id: Int,
-        @Part("email") email: RequestBody,
-        @Part("nama") nama: RequestBody,
-        @Part("tanggal_lahir") tanggal_lahir: RequestBody
-    ): Call<ApiResponse>
     @DELETE("DeletePerusahaan/{id}")
     fun deleteCompany(@Path("id") id: Int): Call<Void>
 
@@ -243,7 +234,8 @@ interface ApiService {
         @Path("email") email: String,
     ): Call<ApiResponse>
 
-    @POST("Perusahaan/EditPerusahaan/{perusahaanId}?_method=PUT")
+    @Multipart
+    @POST("Perusahaan/UpdateDataPerusahaan/{id}?_method=PUT")
     fun updatePerusahaan(
         @Path("id") id: Int,
         @Part("nama") nama: RequestBody,
@@ -251,17 +243,7 @@ interface ApiService {
         @Part("jamkeluar") jamkeluar: RequestBody,
         @Part("latitude") latitude: RequestBody,
         @Part("longitude") longitude: RequestBody,
-        @Part logo: MultipartBody.Part
-    ): Call<ApiResponse>
-
-    @POST("Perusahaan/EditPerusahaan/{perusahaanId}?_method=PUT")
-    fun updatePerusahaanNoFile(
-        @Path("id") id: Int,
-        @Part("nama") nama: RequestBody,
-        @Part("jammasuk") jammasuk: RequestBody,
-        @Part("jamkeluar") jamkeluar: RequestBody,
-        @Part("latitude") latitude: RequestBody,
-        @Part("longitude") longitude: RequestBody
+        @Part logo: MultipartBody.Part?
     ): Call<ApiResponse>
 }
 

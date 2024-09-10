@@ -7,6 +7,9 @@ import android.net.Uri
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.provider.MediaStore
+import android.text.Editable
+import android.text.InputType
+import android.text.TextWatcher
 import android.util.Log
 import android.util.Patterns
 import android.view.View
@@ -18,6 +21,11 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.res.ResourcesCompat
+import com.afollestad.materialdialogs.MaterialDialog
+import com.afollestad.materialdialogs.WhichButton
+import com.afollestad.materialdialogs.actions.setActionButtonEnabled
+import com.afollestad.materialdialogs.input.getInputField
+import com.afollestad.materialdialogs.input.input
 import com.android.volley.toolbox.ImageRequest
 import com.android.volley.toolbox.Volley
 import com.bumptech.glide.Glide
@@ -25,6 +33,7 @@ import com.google.android.material.textfield.TextInputLayout
 import com.windstrom5.tugasakhir.R
 import com.windstrom5.tugasakhir.connection.ApiResponse
 import com.windstrom5.tugasakhir.connection.ApiService
+import com.windstrom5.tugasakhir.connection.SharedPreferencesManager
 import com.windstrom5.tugasakhir.databinding.ActivityEditUserBinding
 import com.windstrom5.tugasakhir.fragment.AddLemburFragment
 import com.windstrom5.tugasakhir.fragment.HistoryLemburFragment
@@ -129,7 +138,7 @@ class EditUserActivity : AppCompatActivity() {
     }
     private fun updateDataUser(Id: Int) {
         val url = "http://192.168.1.6:8000/api/"
-
+        val sharedPreferencesManager = SharedPreferencesManager(this@EditUserActivity)
         val retrofit = Retrofit.Builder()
             .baseUrl(url)
             .addConverterFactory(GsonConverterFactory.create())
@@ -167,6 +176,7 @@ class EditUserActivity : AppCompatActivity() {
             override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
                 if (response.isSuccessful) {
                     val apiResponse = response.body()
+
                     Log.d("ApiResponse", "Status: ${apiResponse?.status}, Message: ${apiResponse?.message}")
                     MotionToast.createToast(
                         this@EditUserActivity,
@@ -177,11 +187,28 @@ class EditUserActivity : AppCompatActivity() {
                         MotionToast.LONG_DURATION,
                         ResourcesCompat.getFont(this@EditUserActivity, R.font.ralewaybold)
                     )
+                    val updatedUser = if (admin != null) {
+                        apiResponse?.admin
+                    } else {
+                        apiResponse?.pekerja
+                    }
+                    if (updatedUser != null) {
+                        // Save or update the local representation of the admin or pekerja
+                        if (admin != null) {
+                            admin = updatedUser as? Admin
+                            sharedPreferencesManager.removeAdmin()
+                            admin?.let { sharedPreferencesManager.saveAdmin(it) }
+                        } else {
+                            pekerja = updatedUser as? Pekerja
+                            sharedPreferencesManager.removePekerja()
+                            pekerja?.let { sharedPreferencesManager.savePekerja(it) }
+                        }
+                    }
                     val intent = Intent(this@EditUserActivity, CompanyActivity::class.java)
                     val userBundle = Bundle()
-                    userBundle.putParcelable("user", admin)
+                    userBundle.putParcelable("user", if (admin != null) admin else pekerja)
                     userBundle.putParcelable("perusahaan", perusahaan)
-                    userBundle.putString("role", "Admin")
+                    userBundle.putString("role", if (admin != null) "Admin" else "Pekerja")
                     intent.putExtra("data", userBundle)
                     startActivity(intent)
                 } else {
@@ -294,69 +321,87 @@ class EditUserActivity : AppCompatActivity() {
         return tempFile
     }
     private fun showNamaTextDialog() {
-        val textInputLayout = TextInputLayout(this@EditUserActivity)
-        val editText = EditText(this@EditUserActivity)
-        textInputLayout.hint = "Nama User"
-        if(admin!= null){
-            editText.setText(admin?.nama)
-        }else{
-            editText.setText(pekerja?.nama)
-        }
-        textInputLayout.addView(editText)
+        val initialText = nama.text.toString()
+        val titleText = if (admin != null) "Nama Admin" else "Nama Pekerja"
 
-        val dialogBuilder = AlertDialog.Builder(this@EditUserActivity)
-            .setView(textInputLayout)
-            .setTitle("Enter Text")
-            .setPositiveButton("OK") { dialog, which ->
-                // Handle the text input when the user clicks OK
-                val enteredText = editText.text.toString()
+        val dialog = MaterialDialog(this).show {
+            title(text = titleText)  // Set the dialog title
+            input(
+                hint = "Masukkan Nama",
+                prefill = initialText,
+                inputType = InputType.TYPE_CLASS_TEXT
+            ) { dialog, input ->
+                // Enable the positive button only if the input is not empty
+                dialog.setActionButtonEnabled(WhichButton.POSITIVE, input.isNotBlank())
+            }
+            positiveButton(text = "OK") { dialog ->
+                val enteredText = dialog.getInputField().text.toString()
                 nama.setText(enteredText)
-                // Do something with the entered text
             }
-            .setNegativeButton("Cancel") { dialog, which ->
-                // Handle the cancellation if needed
-                dialog.dismiss()
-            }
-
-        val dialog = dialogBuilder.create()
-        dialog.show()
-    }
-    private fun showEmailTextDialog() {
-        val textInputLayout = TextInputLayout(this@EditUserActivity)
-        val editText = EditText(this@EditUserActivity)
-        textInputLayout.hint = "Nama Perusahaan"
-        if(admin!= null){
-            editText.setText(admin?.email)
-        }else{
-            editText.setText(pekerja?.email)
+            negativeButton(text = "Cancel")
         }
-        textInputLayout.addView(editText)
+        dialog.getInputField().addTextChangedListener(object : TextWatcher {
+            override fun afterTextChanged(s: Editable?) {
+                val inputText = s.toString()
+                val isValid = inputText.isNotBlank()
+                dialog.setActionButtonEnabled(WhichButton.POSITIVE, isValid)
 
-        val dialogBuilder = AlertDialog.Builder(this@EditUserActivity)
-            .setView(textInputLayout)
-            .setTitle("Enter Text")
-            .setPositiveButton("OK") { dialog, which ->
-                val enteredText = editText.text.toString()
-                if(Patterns.EMAIL_ADDRESS.matcher(enteredText).matches()){
-                    email.setText(enteredText)
-                }else{
-                    MotionToast.createToast(this@EditUserActivity, "Error",
-                        "Email Tidak Valid",
-                        MotionToastStyle.ERROR,
-                        MotionToast.GRAVITY_BOTTOM,
-                        MotionToast.LONG_DURATION,
-                        ResourcesCompat.getFont(this@EditUserActivity, R.font.ralewaybold))
+                // Show error if input is invalid
+                dialog.getInputField().error = when {
+                    inputText.isBlank() -> "Nama cannot be empty"
+                    else -> null // Clear error if valid
                 }
-                // Do something with the entered text
             }
-            .setNegativeButton("Cancel") { dialog, which ->
-                // Handle the cancellation if needed
-                dialog.dismiss()
-            }
-
-        val dialog = dialogBuilder.create()
-        dialog.show()
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+        })
     }
+
+
+    private fun showEmailTextDialog() {
+        val initialText = email.text.toString()
+        val titleText = "Enter Email"
+
+        val dialog = MaterialDialog(this).show {
+            title(text = titleText)  // Set the dialog title
+            input(
+                hint = "Nama Perusahaan",
+                prefill = initialText,
+                inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
+            ) { dialog, input ->
+                val enteredText = dialog.getInputField().text.toString()
+                dialog.setActionButtonEnabled(WhichButton.POSITIVE, enteredText.isNotBlank() && Patterns.EMAIL_ADDRESS.matcher(enteredText).matches())
+            }
+            positiveButton(text = "OK") { dialog ->
+                val enteredText = dialog.getInputField().text.toString()
+                email.setText(enteredText)
+            }
+            negativeButton(text = "Cancel")
+
+            // Set initial button state
+            setActionButtonEnabled(WhichButton.POSITIVE, !initialText.isNullOrBlank() && Patterns.EMAIL_ADDRESS.matcher(initialText).matches())
+        }
+
+        // Add a TextWatcher for real-time validation
+        dialog.getInputField().addTextChangedListener(object : TextWatcher {
+            override fun afterTextChanged(s: Editable?) {
+                val inputText = s.toString()
+                val isValid = inputText.isNotBlank() && Patterns.EMAIL_ADDRESS.matcher(inputText).matches()
+                dialog.setActionButtonEnabled(WhichButton.POSITIVE, isValid)
+
+                // Show error if input is invalid
+                dialog.getInputField().error = when {
+                    inputText.isBlank() -> "Email cannot be empty"
+                    !Patterns.EMAIL_ADDRESS.matcher(inputText).matches() -> "Invalid email address"
+                    else -> null // Clear error if valid
+                }
+            }
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+        })
+    }
+
+
     private fun getBundle() {
         bundle = intent?.getBundleExtra("data")
         if (bundle != null) {

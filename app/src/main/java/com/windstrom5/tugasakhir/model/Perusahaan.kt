@@ -15,6 +15,7 @@ data class Perusahaan(
     val batasAktif: Date,
     val logo: String?,
     val secret_key: String,
+    val holiday:String?
 ): Parcelable {
     constructor(parcel: Parcel) : this(
         parcel.readValue(Int::class.java.classLoader) as? Int,
@@ -24,6 +25,7 @@ data class Perusahaan(
         Time.valueOf(parcel.readString() ?: "00:00:00"),
         Time.valueOf(parcel.readString() ?: "00:00:00"),
         parcel.readSerializable() as Date,
+        parcel.readString() ?: "",
         parcel.readString() ?: "",
         parcel.readString() ?: ""
     )
@@ -38,6 +40,7 @@ data class Perusahaan(
         parcel.writeSerializable(batasAktif)
         parcel.writeString(logo)
         parcel.writeString(secret_key)
+        parcel.writeString(holiday)
     }
 
     override fun describeContents(): Int {

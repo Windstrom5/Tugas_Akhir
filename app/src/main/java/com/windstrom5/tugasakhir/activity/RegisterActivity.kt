@@ -1,6 +1,7 @@
 package com.windstrom5.tugasakhir.activity
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -8,10 +9,13 @@ import android.provider.MediaStore
 import android.util.Log
 import android.view.View
 import android.view.WindowManager
+import android.widget.ArrayAdapter
+import android.widget.AutoCompleteTextView
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.MultiAutoCompleteTextView
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -22,9 +26,13 @@ import com.android.volley.RequestQueue
 import com.android.volley.toolbox.JsonArrayRequest
 import com.android.volley.toolbox.Volley
 import com.bumptech.glide.Glide
+import com.ferfalk.simplesearchview.SimpleTextWatcher
 import com.google.android.material.textfield.TextInputLayout
 import com.google.android.material.timepicker.MaterialTimePicker
 import com.google.android.material.timepicker.TimeFormat
+import com.teamwork.autocomplete.MultiAutoComplete
+import com.teamwork.autocomplete.tokenizer.PrefixTokenizer
+import com.teamwork.autocomplete.view.MultiAutoCompleteEditText
 import com.windstrom5.tugasakhir.R
 import com.windstrom5.tugasakhir.connection.ApiResponse
 import com.windstrom5.tugasakhir.connection.ApiService
@@ -60,6 +68,7 @@ class RegisterActivity : AppCompatActivity() {
     private lateinit var requestQueue: RequestQueue
     private lateinit var Tvlatitude: TextView
     private lateinit var edNamaPerusahaan: EditText
+    private lateinit var autoCompleteTextView: AutoCompleteTextView
     private lateinit var selectedFileName: TextView
     private var perusahaan: Perusahaan? = null
     private var bundle: Bundle? = null
@@ -76,11 +85,11 @@ class RegisterActivity : AppCompatActivity() {
     private lateinit var imageView: ImageView
     private lateinit var loading: LinearLayout
     private lateinit var path: String
-
+    private val selectedItems = mutableSetOf<String>() // To keep track of selected items
     companion object {
         private const val PICK_IMAGE_REQUEST_CODE = 123
     }
-
+    private val selectedDays = mutableListOf<String>() // List to store selected days
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityRegisterBinding.inflate(layoutInflater)
@@ -89,6 +98,29 @@ class RegisterActivity : AppCompatActivity() {
         location = binding.selectLocationButton
         TINamaPerusahaan = binding.textInputPerusahaan
         TIJamkeluar = binding.textInputkeluar
+        autoCompleteTextView = binding.acholiday
+        val adapter = ArrayAdapter.createFromResource(
+            this,
+            R.array.holiday_holiday_options,
+            android.R.layout.simple_dropdown_item_1line
+        )
+
+//        autoCompleteTextView.setAdapter(adapter)
+//        val tokenizer: MultiAutoCompleteTextView.Tokenizer = PrefixTokenizer(',')
+//        autoCompleteTextView.setTokenizer(tokenizer)
+//        autoCompleteTextView.addTextChangedListener(object : SimpleTextWatcher() {
+//            override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {
+//                val currentInput = s.toString().trim()
+//                val suggestions = holidayholidayOptions.filter { option ->
+//                    option.contains(currentInput, ignoreCase = true) && !selectedItems.contains(option)
+//                }
+//                val newAdapter = ArrayAdapter(this@RegisterActivity, android.R.layout.simple_dropdown_item_1line, suggestions)
+//                autoCompleteTextView.setAdapter(newAdapter)
+//            }
+//        })
+
+        // Optionally, set a hint to indicate what the user should do
+        autoCompleteTextView.hint = "Hari Libur"
         loading = findViewById(R.id.layout_loading)
         TIJammasuk = binding.textInputMasuk
         imageView = binding.imageView
@@ -101,6 +133,13 @@ class RegisterActivity : AppCompatActivity() {
         upload = binding.uploadfile
         createnow = binding.cirLoginButton
         getBundle()
+
+        autoCompleteTextView.setOnClickListener {
+            val holidayOptions = resources.getStringArray(R.array.holiday_holiday_options)
+            val checkedItems = BooleanArray(holidayOptions.size)
+            showDaySelectionDialog(holidayOptions, checkedItems)
+        }
+
         location.setOnClickListener {
 //            if (edNamaPerusahaan.text.isNotEmpty()) {
             val intent = Intent(this, MapActivity::class.java)
@@ -108,7 +147,8 @@ class RegisterActivity : AppCompatActivity() {
             bundle.putString("namaPerusahaan", TINamaPerusahaan.editText?.text.toString())
             bundle.putString("openhour", TIJammasuk.editText?.text.toString())
             bundle.putString("closehour", TIJamkeluar.editText?.text.toString())
-            bundle.putString("category", "edit")
+            bundle.putString("holiday", autoCompleteTextView.text.toString())
+            bundle.putString("category", "register")
             intent.putExtra("data", bundle)
             startActivity(intent)
 //            } else {
@@ -126,7 +166,7 @@ class RegisterActivity : AppCompatActivity() {
         }
         createnow.setOnClickListener {
             setLoading(true)
-            if (TINamaPerusahaan == null || TIJammasuk == null || TIJamkeluar == null || information.visibility == View.GONE) {
+            if (TINamaPerusahaan == null || TIJammasuk == null || TIJamkeluar == null || information.visibility == View.GONE || autoCompleteTextView.text.isNullOrEmpty()) {
                 MotionToast.createToast(
                     this@RegisterActivity, "Error",
                     "Ada Form Yang belum Terisi",
@@ -149,7 +189,8 @@ class RegisterActivity : AppCompatActivity() {
                 stringToSqlTime(TIJamkeluar.editText?.text.toString()),
                 sqlDate,
                 selectedFile,
-                secretKey
+                secretKey,
+                autoCompleteTextView.text.toString()
             )
             val url = "http://192.168.1.6:8000/api/"
             val retrofit = Retrofit.Builder()
@@ -212,6 +253,44 @@ class RegisterActivity : AppCompatActivity() {
 
         }
     }
+    private fun showDaySelectionDialog(daysArray: Array<String>, checkedItems: BooleanArray) {
+        // Initialize the selectedDaysList based on the current value in AutoCompleteTextView
+        val currentText = autoCompleteTextView.text.toString()
+        val selectedDaysList = if (currentText.isNotBlank()) {
+            currentText.split(", ").map { it.trim() }.toMutableList()
+        } else {
+            mutableListOf()
+        }
+
+        // Initialize checkedItems based on selectedDaysList
+        for (i in daysArray.indices) {
+            checkedItems[i] = selectedDaysList.contains(daysArray[i])
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("Pilih Hari Libur")
+            .setMultiChoiceItems(daysArray, checkedItems) { _, which, isChecked ->
+                if (isChecked) {
+                    if (daysArray[which].isNotBlank()) {
+                        selectedDaysList.add(daysArray[which]) // Add day to the list if checked
+                    }
+                } else {
+                    selectedDaysList.remove(daysArray[which]) // Remove day if unchecked
+                }
+            }
+            .setPositiveButton("OK") { dialog, _ ->
+                // Format the list properly without leading or trailing commas
+                val formattedText = selectedDaysList.joinToString(", ").trim()
+                autoCompleteTextView.setText(formattedText) // Display selected days
+                dialog.dismiss()
+            }
+            .setNegativeButton("Batal") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .show()
+    }
+
+
 
     private fun setLoading(isLoading: Boolean) {
         if (isLoading) {
@@ -412,6 +491,16 @@ class RegisterActivity : AppCompatActivity() {
         return RequestBody.create(MediaType.parse("text/plain"), value)
     }
 
+    private val holidayholidayMapping = mapOf(
+        "Nasional" to "National Holiday",
+        "Senin" to "Monday",
+        "Selasa" to "Tuesday",
+        "Rabu" to "Wednesday",
+        "Kamis" to "Thursday",
+        "Jumat" to "Friday",
+        "Sabtu" to "Saturday",
+        "Minggu" to "Sunday"
+    )
 
     private fun getBundle() {
         bundle = intent?.getBundleExtra("data")
@@ -421,9 +510,9 @@ class RegisterActivity : AppCompatActivity() {
                 val openHours = it.getString("openhour") ?: ""
                 val closeHours = it.getString("closehour") ?: ""
                 val latitude = it.getDouble("latitude")
-                Log.d("Editor", latitude.toString())
                 val longitude = it.getDouble("longitude")
                 val address = it.getString("address")
+                val holiday = it.getString("holiday")
                 if (address != null) {
                     information.visibility = View.VISIBLE
                     tvaddress.text = address.toString()
@@ -432,6 +521,7 @@ class RegisterActivity : AppCompatActivity() {
                     edNamaPerusahaan.setText(namaPerusahaan)
                     TIJamkeluar.editText?.setText(closeHours)
                     TIJammasuk.editText?.setText(openHours)
+                    autoCompleteTextView.setText(holiday, false)
                 }
             }
         } else {
