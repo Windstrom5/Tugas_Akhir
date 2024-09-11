@@ -130,8 +130,19 @@ class AddLemburFragment : Fragment() {
 
         // Set onClickListener for the save button
         save.setOnClickListener {
+            Log.d("Amkam","Ming")
             save.startAnimation()
-            pekerja?.let { it1 -> perusahaan?.let { it2 -> saveDataLembur(it1, it2) } }
+            if(isAllFieldsFilled()){
+                pekerja?.let { it1 -> perusahaan?.let { it2 -> saveDataLembur(it1, it2) } }
+            }else{
+                save.revertAnimation()
+                MotionToast.createToast(requireActivity(), "Error",
+                    "Belum Semua Form Terisi",
+                    MotionToastStyle.ERROR,
+                    MotionToast.GRAVITY_BOTTOM,
+                    MotionToast.LONG_DURATION,
+                    ResourcesCompat.getFont(requireActivity(), R.font.ralewaybold))
+            }
         }
 
         return view
@@ -146,36 +157,36 @@ class AddLemburFragment : Fragment() {
         }
     }
     private fun isAllFieldsFilled(): Boolean {
-    val missingFields = mutableListOf<String>()
+        val missingFields = mutableListOf<String>()
 
-    if (TINama.editText?.text.isNullOrEmpty()) {
-        missingFields.add("Nama")
-    }
-    if (TITanggal.editText?.text.isNullOrEmpty()) {
-        missingFields.add("Tanggal Lembur")
-    }
-    if (TIMasuk.editText?.text.isNullOrEmpty()) {
-        missingFields.add("Jam Masuk")
-    }
-    if (TIPulang.editText?.text.isNullOrEmpty()) {
-        missingFields.add("Jam Pulang")
-    }
-    if (selectedFileName.text == "No file selected") {
-        missingFields.add("Bukti Lembur")
-    }
+        if (TINama.editText?.text.isNullOrEmpty()) {
+            missingFields.add("Nama")
+        }
+        if (TITanggal.editText?.text.isNullOrEmpty()) {
+            missingFields.add("Tanggal Lembur")
+        }
+        if (TIMasuk.editText?.text.isNullOrEmpty()) {
+            missingFields.add("Jam Masuk")
+        }
+        if (TIPulang.editText?.text.isNullOrEmpty()) {
+            missingFields.add("Jam Pulang")
+        }
+        if (selectedFileName.text == "No file selected") {
+            missingFields.add("Bukti Lembur")
+        }
 
-    if (missingFields.isNotEmpty()) {
-        val errorMessage = "The following fields are empty: ${missingFields.joinToString(", ")}"
-        PopupDialog.getInstance(requireContext())
-            .statusDialogBuilder()
-            .createErrorDialog()
-            .setHeading("Cannot Save")
-            .setDescription(errorMessage)
-            .build(Dialog::dismiss)
-            .show()
-        return false
-    }
-    return true
+        if (missingFields.isNotEmpty()) {
+            val errorMessage = "The following fields are empty: ${missingFields.joinToString(", ")}"
+            PopupDialog.getInstance(requireContext())
+                .statusDialogBuilder()
+                .createErrorDialog()
+                .setHeading("Cannot Save")
+                .setDescription(errorMessage)
+                .build(Dialog::dismiss)
+                .show()
+            return false
+        }
+        return true
     }
 
     private fun showDatePickerDialog(editText: EditText?) {
@@ -447,7 +458,8 @@ class AddLemburFragment : Fragment() {
                         ResourcesCompat.getFont(requireContext(), R.font.ralewaybold))
                 } else {
                     save.revertAnimation()
-                    Log.e("ApiResponse", "Error: ${response.code()}")
+                    val errorMessage = response.errorBody()?.string() ?: "Unknown error"
+                    Log.e("ApiResponse", "Error: ${response.message()} - $errorMessage")
                 }
             }
 
@@ -460,5 +472,10 @@ class AddLemburFragment : Fragment() {
     }
     private fun createPartFromString(value: String): RequestBody {
         return RequestBody.create(MediaType.parse("text/plain"), value)
+    }
+    private fun stringToSqlTime(timeString: String): Time {
+        val dateFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+        val date = dateFormat.parse(timeString)
+        return Time(date.time)
     }
 }

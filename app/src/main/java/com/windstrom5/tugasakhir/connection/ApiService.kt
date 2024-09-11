@@ -60,7 +60,7 @@ interface ApiService {
         @Part("nama") nama: RequestBody,
         @Part("tanggal") tanggal: RequestBody,
         @Part("waktu_masuk") waktu_masuk: RequestBody,
-        @Part("waktu_keluar") waktu_keluar: RequestBody,
+        @Part("waktu_pulang") waktu_keluar: RequestBody,
         @Part("pekerjaan") pekerjaan: RequestBody,
         @Part bukti: MultipartBody.Part
     ): Call<ApiResponse>

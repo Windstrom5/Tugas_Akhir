@@ -34,6 +34,7 @@ import com.itextpdf.html2pdf.HtmlConverter
 import com.windstrom5.tugasakhir.model.Perusahaan
 import com.windstrom5.tugasakhir.model.session_lembur
 import org.json.JSONException
+import java.util.Calendar
 
 class LemburAdapter(
     private val perusahaan: Perusahaan,
@@ -128,6 +129,8 @@ class LemburAdapter(
         val jammasuk = timeFormatter.format(lembur.waktu_masuk)
         val jamkeluar = timeFormatter.format(lembur.waktu_pulang)
         tanggal.text = tanggalFormatted
+        val now = Calendar.getInstance().time
+        val jamMasuk = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).parse(lembur.waktu_masuk.toString()) ?: Date()
         jam.text = "$jammasuk - $jamkeluar"
         when {
             Role == "Admin" && lembur.status == "Pending" -> {
@@ -147,8 +150,16 @@ class LemburAdapter(
                 actionButton.text = "Edit \nData"
             }
             Role != "Admin" && lembur.status == "On Going" -> {
-                actionButton.visibility = View.VISIBLE
-                actionButton.text = "Upload \nProgress"
+                if (now.before(jamMasuk)) {
+                    // Current time is before jam_masuk
+                    actionButton.visibility = View.VISIBLE
+                    actionButton.text = "Waiting\nTo Hfbours Started"
+                    actionButton.isEnabled = false
+                } else {
+                    // Current time is on or after jam_masuk
+                    actionButton.visibility = View.VISIBLE
+                    actionButton.text = "Upload \nProgress"
+                }
             }
             Role != "Admin" && lembur.status == "Finished" -> {
                 actionButton.visibility = View.VISIBLE
@@ -236,7 +247,7 @@ class LemburAdapter(
         return view
     }
     fun fetchSessionLemburData(lemburId: Int, onSuccess: (List<session_lembur>) -> Unit, onError: (VolleyError) -> Unit) {
-        val url = "YOUR_API_ENDPOINT/$lemburId" // Replace with your API endpoint
+        val url = "http://192.168.1.6:8000/api/Lembur/GetSession/$lemburId" // Replace with your API endpoint
         val jsonArrayRequest = JsonArrayRequest(
             Request.Method.GET, url, null,
             { response ->
