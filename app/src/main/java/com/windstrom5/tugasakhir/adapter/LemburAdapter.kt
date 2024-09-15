@@ -2,7 +2,10 @@ package com.windstrom5.tugasakhir.adapter
 
 import android.content.Context
 import android.os.Bundle
+import android.os.CountDownTimer
 import android.os.Environment
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -34,7 +37,10 @@ import com.itextpdf.html2pdf.HtmlConverter
 import com.windstrom5.tugasakhir.model.Perusahaan
 import com.windstrom5.tugasakhir.model.session_lembur
 import org.json.JSONException
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 import java.util.Calendar
+import java.util.concurrent.TimeUnit
 
 class LemburAdapter(
     private val perusahaan: Perusahaan,
@@ -150,11 +156,32 @@ class LemburAdapter(
                 actionButton.text = "Edit \nData"
             }
             Role != "Admin" && lembur.status == "On Going" -> {
-                if (now.before(jamMasuk)) {
-                    // Current time is before jam_masuk
-                    actionButton.visibility = View.VISIBLE
-                    actionButton.text = "Waiting\nTo Hfbours Started"
-                    actionButton.isEnabled = false
+                val formatter = DateTimeFormatter.ofPattern("HH:mm:ss", Locale.getDefault())
+                val waktuMasuk = LocalTime.parse(lembur.waktu_masuk.toString(), formatter)
+                val now = LocalTime.now()
+                if (now.isBefore(waktuMasuk)) {
+                    val diffInSeconds = java.time.Duration.between(now, waktuMasuk).seconds
+
+                    // Initialize the countdown timer
+                    object : CountDownTimer(diffInSeconds * 1000, 1000) {
+                        override fun onTick(millisUntilFinished: Long) {
+                            val diffMinutes = TimeUnit.MILLISECONDS.toMinutes(millisUntilFinished)
+                            val diffHours = TimeUnit.MILLISECONDS.toHours(millisUntilFinished)
+                            val diffSeconds = TimeUnit.MILLISECONDS.toSeconds(millisUntilFinished) % 60
+                            val cooldownText = String.format("%02d:%02d:%02d \nRemaining", diffHours, diffMinutes % 60, diffSeconds)
+
+                            actionButton.visibility = View.VISIBLE
+                            actionButton.text = cooldownText
+                            actionButton.isEnabled = false
+                        }
+
+                        override fun onFinish() {
+                            // When the countdown finishes, update the button
+                            actionButton.visibility = View.VISIBLE
+                            actionButton.text = "Upload \nProgress"
+                            actionButton.isEnabled = true
+                        }
+                    }.start()
                 } else {
                     // Current time is on or after jam_masuk
                     actionButton.visibility = View.VISIBLE
@@ -176,14 +203,23 @@ class LemburAdapter(
                     generatePdfFromHtml(htmlContent)
                 }
                 "Upload \nProgress" ->{
+                    Log.d("ApiResponse","Clicked")
                     lembur.id?.let { it1 ->
                         fetchSessionLemburData(it1, onSuccess = { lemburList ->
                             val fragmentManager = (context as AppCompatActivity).supportFragmentManager
                             val previewDialogFragment = PreviewDialogFragment()
                             val bundle = Bundle()
-                            bundle.putParcelableArrayList("lemburList", ArrayList(lemburList))
-                            bundle.putString("layoutType", "lembur_layout")
-                            bundle.putString("category", "session_pekerja")
+                            if (lemburList.isNullOrEmpty()) {
+                                Log.e("Lembur", "No data available for the given Lembur ID")
+                                bundle.putParcelable("lembur", lembur) // Pass different object for Lembur
+                                bundle.putString("layoutType", "session_lembur")
+                                bundle.putString("category", "session_pekerja")
+                            }else{
+                                bundle.putParcelableArrayList("lemburList", ArrayList(lemburList))
+                                bundle.putParcelable("lembur", lembur) // Pass different object for Lembur
+                                bundle.putString("layoutType", "session_lembur")
+                                bundle.putString("category", "session_pekerja")
+                            }
                             previewDialogFragment.arguments = bundle
                             previewDialogFragment.setStyle(DialogFragment.STYLE_NORMAL, R.style.Dialog_FullWidth)
                             previewDialogFragment.show(fragmentManager, "preview_dialog")
@@ -229,7 +265,7 @@ class LemburAdapter(
                                 val bundle = Bundle()
                                 bundle.putParcelable("lembur", lembur)
                                 bundle.putParcelableArrayList("lemburList", ArrayList(lemburList))
-                                bundle.putString("layoutType", "lembur_layout")
+                                bundle.putString("layoutType", "session_lembur")
                                 bundle.putString("category", "session_admin")
                                 previewDialogFragment.arguments = bundle
                                 previewDialogFragment.setStyle(DialogFragment.STYLE_NORMAL, R.style.Dialog_FullWidth)
@@ -246,26 +282,36 @@ class LemburAdapter(
         }
         return view
     }
-    fun fetchSessionLemburData(lemburId: Int, onSuccess: (List<session_lembur>) -> Unit, onError: (VolleyError) -> Unit) {
-        val url = "http://192.168.1.6:8000/api/Lembur/GetSession/$lemburId" // Replace with your API endpoint
-        val jsonArrayRequest = JsonArrayRequest(
+    private fun fetchSessionLemburData(lemburId: Int, onSuccess: (List<session_lembur>) -> Unit, onError: (VolleyError) -> Unit) {
+        val url = "http://192.168.1.6:8000/api/Lembur/Session/GetSession/$lemburId" // Replace with your API endpoint
+        val jsonObjectRequest = JsonObjectRequest(
             Request.Method.GET, url, null,
             { response ->
                 try {
                     val lemburList = mutableListOf<session_lembur>()
-                    for (i in 0 until response.length()) {
-                        val jsonObject = response.getJSONObject(i)
-                        val sessionLembur = session_lembur(
-                            id = jsonObject.optInt("id"),
-                            id_lembur = jsonObject.optInt("id_lembur"),
-                            jam = Date(jsonObject.optLong("jam")),
-                            keterangan = jsonObject.optString("keterangan"),
-                            bukti = jsonObject.optString("bukti"),
-                            status = jsonObject.optString("status")
-                        )
-                        lemburList.add(sessionLembur)
+                    val dataArray = response.optJSONArray("data") // Access the "data" field as an array
+                    val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+                    if (dataArray != null) {
+                        for (i in 0 until dataArray.length()) {
+                            val jsonObject = dataArray.getJSONObject(i)
+                            val jamString = jsonObject.optString("jam") // Get timestamp as string
+                            val jamDate = dateFormat.parse(jamString) // Parse string to Date
+                            Log.d("LemburLogTimeStamp", Date(jsonObject.optLong("jam")).toString())
+                            val sessionLembur = session_lembur(
+                                id = jsonObject.optInt("id"),
+                                id_lembur = jsonObject.optInt("id_lembur"),
+                                jam = jamDate ?: Date(0),
+                                keterangan = jsonObject.optString("keterangan"),
+                                bukti = jsonObject.optString("bukti"),
+                                status = jsonObject.optString("status")
+                            )
+                            lemburList.add(sessionLembur)
+                        }
+                        onSuccess(lemburList)
+                    } else {
+                        // Handle the case where "data" is not present in the response
+                        onError(VolleyError("No data found in response"))
                     }
-                    onSuccess(lemburList)
                 } catch (e: JSONException) {
                     e.printStackTrace()
                     onError(VolleyError("Parsing error"))
@@ -275,8 +321,9 @@ class LemburAdapter(
                 onError(error)
             }
         )
-        Volley.newRequestQueue(context).add(jsonArrayRequest)
+        Volley.newRequestQueue(context).add(jsonObjectRequest)
     }
+
 
 
     private fun getHtmlTemplate(lembur: LemburItem): String {

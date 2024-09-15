@@ -245,5 +245,24 @@ interface ApiService {
         @Part("longitude") longitude: RequestBody,
         @Part logo: MultipartBody.Part?
     ): Call<ApiResponse>
+
+    @Multipart
+    @POST("Lembur/Session/UpdateSession/{id}?_method=PUT")
+    fun UpdateSessionLembur(
+        @Path("id") id: Int,
+        @Part("id_lembur") id_lembur: RequestBody,
+        @Part("jam") jam: RequestBody,
+        @Part("keterangan") keterangan: RequestBody,
+        @Part("bukti") bukti: MultipartBody.Part,
+    ): Call<ApiResponse>
+
+    @Multipart
+    @POST("Lembur/Session/AddSession")
+    fun AddSessionLembur(
+        @Part("id_lembur") id_lembur: RequestBody,
+        @Part("jam") jam: RequestBody,
+        @Part("keterangan") keterangan: RequestBody,
+        @Part("bukti") bukti: MultipartBody.Part,
+    ): Call<ApiResponse>
 }
 

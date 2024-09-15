@@ -1,13 +1,18 @@
 package com.windstrom5.tugasakhir.activity
 
 import android.app.AlertDialog
+import android.graphics.Bitmap
 import android.icu.text.SimpleDateFormat
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.widget.Button
+import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
+import com.android.volley.toolbox.ImageRequest
+import com.android.volley.toolbox.Volley
 import com.bumptech.glide.Glide
 import com.windstrom5.tugasakhir.R
 import com.windstrom5.tugasakhir.databinding.ActivityProfileBinding
@@ -92,11 +97,24 @@ class ProfileActivity : AppCompatActivity() {
                     if(jenis == "Pekerja"){
                         pekerja = it.getParcelable("user")
                         if (pekerja?.profile != "null") {
-                            val imageUrl =
-                                "http://192.168.1.6:8000/storage/${pekerja?.profile}" // Replace with your Laravel image URL
-                            Glide.with(this)
-                                .load(imageUrl)
-                                .into(profile)
+                            val url =
+                                "http://192.168.1.6:8000/api/Admin/decryptProfile/${admin?.id}" // Replace with your actual URL
+
+                            val imageRequest = ImageRequest(
+                                url,
+                                { response ->
+                                    // Set the Bitmap to an ImageView or handle it as needed
+                                    profile.setImageBitmap(response)
+                                },
+                                0, 0, ImageView.ScaleType.CENTER_CROP, Bitmap.Config.RGB_565,
+                                { error ->
+                                    error.printStackTrace()
+                                    Toast.makeText(this, "Failed to fetch profile image", Toast.LENGTH_SHORT).show()
+                                }
+                            )
+
+                            val requestQueue = Volley.newRequestQueue(this)
+                            requestQueue.add(imageRequest)
                         }else{
                             Glide.with(this)
                                 .load(R.drawable.profile)
@@ -151,11 +169,24 @@ class ProfileActivity : AppCompatActivity() {
                     if(jenis == "Pekerja"){
                         pekerja = it.getParcelable("user")
                         if (pekerja?.profile != "null") {
-                            val imageUrl =
-                                "http://192.168.1.6:8000/storage/${pekerja?.profile}" // Replace with your Laravel image URL
-                            Glide.with(this)
-                                .load(imageUrl)
-                                .into(profile)
+                            val url =
+                                "http://192.168.1.6:8000/api/Pekerja/decryptProfile/${admin?.id}" // Replace with your actual URL
+
+                            val imageRequest = ImageRequest(
+                                url,
+                                { response ->
+                                    // Set the Bitmap to an ImageView or handle it as needed
+                                    profile.setImageBitmap(response)
+                                },
+                                0, 0, ImageView.ScaleType.CENTER_CROP, Bitmap.Config.RGB_565,
+                                { error ->
+                                    error.printStackTrace()
+                                    Toast.makeText(this, "Failed to fetch profile image", Toast.LENGTH_SHORT).show()
+                                }
+                            )
+
+                            val requestQueue = Volley.newRequestQueue(this)
+                            requestQueue.add(imageRequest)
                         }else{
                             Glide.with(this)
                                 .load(R.drawable.profile)

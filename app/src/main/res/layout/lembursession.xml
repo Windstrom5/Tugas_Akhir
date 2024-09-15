@@ -50,6 +50,8 @@
                         android:textSize="@dimen/newsMoreTextSize"
                         android:background="@color/primaryTextColor"
                         android:hint="Sesi Pekerja"
+                        android:focusable="false"
+                        android:cursorVisible="false"
                         android:maxLines="1" />
                 </com.google.android.material.textfield.TextInputLayout>
                 <TextView
