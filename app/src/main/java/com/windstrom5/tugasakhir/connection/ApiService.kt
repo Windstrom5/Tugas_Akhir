@@ -161,7 +161,7 @@ interface ApiService {
         @Part("tanggal") tanggal: RequestBody,
         @Part("kategori") kategori: RequestBody,
         @Part("alasan") alasan: RequestBody,
-        @Part bukti: MultipartBody.Part
+        @Part bukti: MultipartBody.Part?
     ): Call<ApiResponse>
     @Multipart
     @POST("Lembur/UpdateDataLembur/{dinasId}?_method=PUT")
@@ -171,7 +171,7 @@ interface ApiService {
         @Part("masuk") masuk: RequestBody,
         @Part("pulang") pulang: RequestBody,
         @Part("pekerjaan") pekerjaan: RequestBody,
-        @Part bukti: MultipartBody.Part
+        @Part bukti: MultipartBody.Part?
     ): Call<ApiResponse>
     @Multipart
     @POST("Dinas/UpdateDataDinas/{dinasId}?_method=PUT")
@@ -181,7 +181,7 @@ interface ApiService {
         @Part("pulang") pulang: RequestBody,
         @Part("tujuan") tujuan: RequestBody,
         @Part("kegiatan") kegiatan: RequestBody,
-        @Part bukti: MultipartBody.Part
+        @Part bukti: MultipartBody.Part?
     ): Call<ApiResponse>
     @Multipart
     @POST("Perusahaan/UpdateDataUser/{id}?_method=PUT")
@@ -249,11 +249,10 @@ interface ApiService {
     @Multipart
     @POST("Lembur/Session/UpdateSession/{id}?_method=PUT")
     fun UpdateSessionLembur(
-        @Path("id") id: Int,
-        @Part("id_lembur") id_lembur: RequestBody,
+        @Path("id") id: Int?,
         @Part("jam") jam: RequestBody,
         @Part("keterangan") keterangan: RequestBody,
-        @Part("bukti") bukti: MultipartBody.Part,
+        @Part("bukti") bukti: MultipartBody.Part?,
     ): Call<ApiResponse>
 
     @Multipart

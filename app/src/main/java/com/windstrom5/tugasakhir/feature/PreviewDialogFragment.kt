@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.res.Resources
 import android.graphics.Bitmap
+import android.graphics.Color
 import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Bundle
@@ -55,6 +56,7 @@ import com.windstrom5.tugasakhir.model.Izin
 import com.windstrom5.tugasakhir.model.IzinItem
 import com.windstrom5.tugasakhir.model.Lembur
 import com.windstrom5.tugasakhir.model.LemburItem
+import com.windstrom5.tugasakhir.model.Pekerja
 import com.windstrom5.tugasakhir.model.Perusahaan
 import com.windstrom5.tugasakhir.model.session_lembur
 import kotlinx.coroutines.CoroutineScope
@@ -89,6 +91,7 @@ import java.util.Locale
 
 class PreviewDialogFragment: DialogFragment() {
     private val PICK_PDF_OR_IMAGE_REQUEST_CODE = 100
+    private val PICK_IMAGE_REQUEST_CODE = 123
     private lateinit var selectedFile: File
     private var lembur: LemburItem? = null
     private var dinas: DinasItem? = null
@@ -112,7 +115,11 @@ class PreviewDialogFragment: DialogFragment() {
         }
         return view
     }
-
+    private fun pickImageFromGallery() {
+        val intent = Intent(Intent.ACTION_GET_CONTENT)
+        intent.type = "image/*"
+        startActivityForResult(intent, PICK_IMAGE_REQUEST_CODE)
+    }
     private fun calculateSessions(waktuMasuk: Time, waktuPulang: Time): Pair<List<Pair<String, Pair<String, String>>>, Int> {
         val sessions = mutableListOf<Pair<String, Pair<String, String>>>()
         val currentTime = Time(System.currentTimeMillis())
@@ -185,11 +192,13 @@ class PreviewDialogFragment: DialogFragment() {
     private fun updateButtonsAndLayout(startTime: String, endTime: String) {
         val acceptButton = view?.findViewById<Button>(R.id.acceptButton)
         val rejectButton = view?.findViewById<Button>(R.id.rejectButton)
-        val optionLayout = view?.findViewById<LinearLayout>(R.id.option)
-
+        val pekerjaan = view?.findViewById<TextInputLayout>(R.id.keteranganInputLayout)
+        val change = view?.findViewById<Button>(R.id.changeFile)
         val sdf = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
         val currentTime = sdf.format(Date())
-
+        val text = view?.findViewById<TextView>(R.id.text)
+        val textfile = view?.findViewById<TextView>(R.id.textfile)
+        val selectedFileName = view?.findViewById<TextView>(R.id.selectedFileName)
         val start = sdf.parse(startTime)!!
         val end = sdf.parse(endTime)!!
         val current = sdf.parse(currentTime)!!
@@ -199,19 +208,37 @@ class PreviewDialogFragment: DialogFragment() {
             // Show 'Save' button and hide 'Cancel' button
             acceptButton?.text = "Save"
             rejectButton?.text = "Cancel"
-
+            rejectButton?.visibility = View.VISIBLE
+            pekerjaan?.isEnabled = true
+            change?.isEnabled = true
+            text?.visibility = View.VISIBLE
+            textfile?.visibility = View.VISIBLE
+            selectedFileName?.visibility = View.VISIBLE
+            change?.visibility = View.VISIBLE
             // Make option layout visible
         } else if (current > end){
             acceptButton?.text = "Sesi Expired"
-            rejectButton?.isEnabled = false
+//            rejectButton?.isEnabled = false
             rejectButton?.text = "Cancel"
             rejectButton?.visibility = View.GONE
-
+            pekerjaan?.isEnabled = false
+            change?.isEnabled = false
+            change?.visibility = View.GONE
+            rejectButton?.visibility = View.GONE
+            text?.visibility = View.GONE
+            textfile?.visibility = View.GONE
+            selectedFileName?.visibility = View.GONE
             // Make option layout visible
         } else {
             // Set 'Save' button to countdown or appropriate text
             val diffInMillis = start.time - current.time
             val diffInMinutes = (diffInMillis / (1000 * 60)).toInt()
+            pekerjaan?.isEnabled = false
+            change?.isEnabled = false
+            change?.visibility = View.GONE
+            text?.visibility = View.GONE
+            textfile?.visibility = View.GONE
+            selectedFileName?.visibility = View.GONE
             if (diffInMinutes > 0) {
                 acceptButton?.text = "Waiting\n$diffInMinutes minutes"
             } else {
@@ -229,13 +256,22 @@ class PreviewDialogFragment: DialogFragment() {
 
         // Check for matching sessions
         if (sessionList != null) {
-            val dateFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
-            val startTimeDate = dateFormat.parse(startTime)
-            val endTimeDate = dateFormat.parse(endTime)
+            val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+
+// Parse the startTime and endTime from the selected session
+            val startTimeDate = timeFormat.parse(startTime)
+            val endTimeDate = timeFormat.parse(endTime)
 
             val matchingSessions = sessionList?.filter { session ->
-                Log.d("LemburLog", session.jam.toString())
-                session.jam.after(startTimeDate) && session.jam.before(endTimeDate)
+                // Extract the time part from session.jam
+                val sessionTime = timeFormat.format(session.jam)
+                val sessionTimeDate = timeFormat.parse(sessionTime)
+
+                Log.d("LemburLog", "Session time: $sessionTime")
+                Log.d("LemburLog", "Start time: ${timeFormat.format(startTimeDate)}, End time: ${timeFormat.format(endTimeDate)}")
+
+                // Compare only the time portion (ignoring the date)
+                sessionTimeDate.after(startTimeDate) && sessionTimeDate.before(endTimeDate)
             }
 
             if (matchingSessions != null && matchingSessions.isNotEmpty()) {
@@ -246,8 +282,8 @@ class PreviewDialogFragment: DialogFragment() {
                 // Update the keterangan field
                 view?.findViewById<TextInputLayout>(R.id.keteranganInputLayout)?.editText?.setText(firstMatchingSession.keterangan)
                 val dateFormatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                val tanggalBerangkatFormatted = dateFormatter.format(firstMatchingSession.jam)
-                view?.findViewById<TextInputLayout>(R.id.tanggalInputLayout)?.editText?.setText(tanggalBerangkatFormatted)
+//                val tanggalFormatted = dateFormatter.format(firstMatchingSession.jam)
+//                view?.findViewById<TextInputLayout>(R.id.tanggalInputLayout)?.editText?.setText(tanggalFormatted)
                 // Load image based on matching session
                 val imageView = view?.findViewById<ImageView>(R.id.imageView)
                 val url = "http://192.168.1.6:8000/api/Lembur/Session/decryptBukti/${firstMatchingSession.id}"
@@ -262,7 +298,7 @@ class PreviewDialogFragment: DialogFragment() {
                         error.printStackTrace()
                     }
                 )
-
+                imageView?.visibility =View.VISIBLE
                 val requestQueue = Volley.newRequestQueue(requireContext())
                 requestQueue.add(imageRequest)
 
@@ -271,14 +307,20 @@ class PreviewDialogFragment: DialogFragment() {
             } else {
                 Log.d("LemburLog", "No matching sessions found.")
                 Log.d("LemburLog", startTimeDate.toString() + " - " + endTimeDate.toString())
-
+                val imageView = view?.findViewById<ImageView>(R.id.imageView)
+                imageView?.visibility =View.GONE
+                view?.findViewById<TextInputLayout>(R.id.keteranganInputLayout)?.editText?.setText("")
+                val change = view?.findViewById<Button>(R.id.changeFile)
+                change?.setOnClickListener{
+                    pickImageFromGallery()
+                }
                 // Set up button actions for adding a new session
                 setupButtonsForNewSession()
             }
         }
 
         // Update the tanggalInputLayout with the session start and end times
-        val formattedText = "${lembur?.tanggal.toString()} | Start: $startTime | End: $endTime"
+//        val formattedText = "${lembur?.tanggal.toString()} | Start: $startTime | End: $endTime"
 
 
         // Update the buttons and layout based on the selected session time
@@ -290,9 +332,7 @@ class PreviewDialogFragment: DialogFragment() {
         val rejectButton = view?.findViewById<Button>(R.id.rejectButton)
 
         acceptButton?.setOnClickListener {
-
-
-            Toast.makeText(requireContext(), "Session updated successfully!", Toast.LENGTH_SHORT).show()
+            updateDataSesi()
         }
 
         rejectButton?.setOnClickListener {
@@ -304,11 +344,10 @@ class PreviewDialogFragment: DialogFragment() {
     private fun setupButtonsForNewSession() {
         val acceptButton = view?.findViewById<Button>(R.id.acceptButton)
         val rejectButton = view?.findViewById<Button>(R.id.rejectButton)
-
         acceptButton?.setOnClickListener {
             // Add new session data here
 //            addNewSessionData()
-
+            saveDataSesi()
             Toast.makeText(requireContext(), "New session added successfully!", Toast.LENGTH_SHORT).show()
         }
 
@@ -317,7 +356,101 @@ class PreviewDialogFragment: DialogFragment() {
             dismiss()
         }
     }
+    private fun updateDataSesi(){
+        val url = "http://192.168.1.6:8000/api/"
 
+        val retrofit = Retrofit.Builder()
+            .baseUrl(url)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+        val pekerjaan = view?.findViewById<TextInputLayout>(R.id.keteranganInputLayout)
+        val apiService = retrofit.create(ApiService::class.java)
+        val currentTimestamp = System.currentTimeMillis()
+        val currentTime = Date(currentTimestamp)
+
+        // Optionally format the timestamp (for logging or sending)
+        val timeFormatter = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+        val formattedTimestamp = timeFormatter.format(currentTime)
+        val jam = createPartFromString(formattedTimestamp.toString())
+        val keterangan = createPartFromString(pekerjaan?.editText?.text.toString())
+        val buktifile = selectedFile
+        val buktiPart = if (buktifile != null) {
+            val requestFile = RequestBody.create(MediaType.parse("image/*"), buktifile)
+            MultipartBody.Part.createFormData("bukti", buktifile.name, requestFile)
+        } else {
+            null
+        }
+        val call = apiService.UpdateSessionLembur(lembur?.id,jam,keterangan,buktiPart)
+        call.enqueue(object : Callback<ApiResponse> {
+            override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
+                if (response.isSuccessful) {
+                    val apiResponse = response.body()
+                    Log.d("ApiResponse", "Status: ${apiResponse?.status}, Message: ${apiResponse?.message}")
+                    MotionToast.createToast(requireActivity(), "Add Lembur Success",
+                        "Session Berhasil Ditambahkan",
+                        MotionToastStyle.SUCCESS,
+                        MotionToast.GRAVITY_BOTTOM,
+                        MotionToast.LONG_DURATION,
+                        ResourcesCompat.getFont(requireContext(), R.font.ralewaybold))
+                    dismiss()
+                } else {
+                    val errorMessage = response.errorBody()?.string() ?: "Unknown error"
+                    Log.e("ApiResponse", "Error: ${response.message()} - $errorMessage")
+                }
+            }
+
+            override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
+                Log.e("ApiResponse", "Request failed: ${t.message}")
+            }
+        })
+        setLoading(false)
+    }
+    private fun saveDataSesi(){
+        val url = "http://192.168.1.6:8000/api/"
+
+        val retrofit = Retrofit.Builder()
+            .baseUrl(url)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+        val pekerjaan = view?.findViewById<TextInputLayout>(R.id.keteranganInputLayout)
+        val apiService = retrofit.create(ApiService::class.java)
+        val currentTimestamp = System.currentTimeMillis()
+        val currentTime = Date(currentTimestamp)
+
+        // Optionally format the timestamp (for logging or sending)
+        val timeFormatter = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+        val formattedTimestamp = timeFormatter.format(currentTime)
+        val jam = createPartFromString(formattedTimestamp.toString())
+        val id_lembur = createPartFromString(lembur?.id.toString())
+        val keterangan = createPartFromString(pekerjaan?.editText?.text.toString())
+        val buktifile = selectedFile
+        val requestFile = RequestBody.create(MediaType.parse("image/*"), buktifile)
+        val buktipart = MultipartBody.Part.createFormData("bukti", buktifile.name, requestFile)
+        val call = apiService.AddSessionLembur(id_lembur,jam,keterangan,buktipart)
+        call.enqueue(object : Callback<ApiResponse> {
+            override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
+                if (response.isSuccessful) {
+                    val apiResponse = response.body()
+                    Log.d("ApiResponse", "Status: ${apiResponse?.status}, Message: ${apiResponse?.message}")
+                    MotionToast.createToast(requireActivity(), "Add Lembur Success",
+                        "Session Berhasil Ditambahkan",
+                        MotionToastStyle.SUCCESS,
+                        MotionToast.GRAVITY_BOTTOM,
+                        MotionToast.LONG_DURATION,
+                        ResourcesCompat.getFont(requireContext(), R.font.ralewaybold))
+                    dismiss()
+                } else {
+                    val errorMessage = response.errorBody()?.string() ?: "Unknown error"
+                    Log.e("ApiResponse", "Error: ${response.message()} - $errorMessage")
+                }
+            }
+
+            override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
+                Log.e("ApiResponse", "Request failed: ${t.message}")
+            }
+        })
+        setLoading(false)
+    }
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         dinas = arguments?.getParcelable("dinas")
@@ -515,7 +648,10 @@ class PreviewDialogFragment: DialogFragment() {
                     Log.d("LemburLog", "All sessions: $sessionNames")
                     Log.d("LemburLog", "Closest session index: $safeIndex")
                 }
-
+                val dateFormatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                val tanggalFormatted = dateFormatter.format(lembur?.tanggal)
+                view.findViewById<TextInputLayout>(R.id.tanggalInputLayout)?.editText?.setText(tanggalFormatted)
+                view.findViewById<TextInputLayout>(R.id.namaInputLayout).editText?.setText(lembur?.nama_pekerja)
                 // Automatically select the closest session
                 if (sessions.isNotEmpty()) {
                     acSesi.setText(sessions[closestSessionIndex].first, false)
@@ -526,11 +662,10 @@ class PreviewDialogFragment: DialogFragment() {
                 acSesi.setOnItemClickListener { _, _, position, _ ->
                     val selectedSession = sessions[position]
                     val optionLayout = view?.findViewById<LinearLayout>(R.id.option)
-                    view.findViewById<TextInputLayout>(R.id.namaInputLayout).editText?.setText(lembur?.nama_pekerja)
                     if (position == sessions.size - 1) {
                         optionLayout?.visibility = View.VISIBLE
                     } else {
-                        optionLayout?.visibility = View.VISIBLE
+                        optionLayout?.visibility = View.GONE
                     }
                     updateSessionDetails(selectedSession)
                 }
@@ -939,8 +1074,12 @@ class PreviewDialogFragment: DialogFragment() {
         val tujuan = createPartFromString(acTujuan.text.toString())
         val kegiatan = createPartFromString(TIkegiatan.editText?.text.toString())
         val buktiFile = selectedFile
-        val requestFile = RequestBody.create(MediaType.parse("pdf/*"), buktiFile)
-        val buktiPart = MultipartBody.Part.createFormData("bukti", buktiFile.name, requestFile)
+        val buktiPart = if (buktiFile != null) {
+            val requestFile = RequestBody.create(MediaType.parse("pdf/*"), buktiFile)
+            MultipartBody.Part.createFormData("profile", buktiFile.name, requestFile)
+        } else {
+            null
+        }
         val call = apiService.updateDinas(dinasId, berangkat,pulang,tujuan,kegiatan, buktiPart)
         call.enqueue(object : Callback<ApiResponse> {
             override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
@@ -984,9 +1123,13 @@ class PreviewDialogFragment: DialogFragment() {
         val pulang = createPartFromString(TiKeluar.editText?.text.toString())
         val pekerjaan = createPartFromString(TIkegiatan.editText?.text.toString())
         val buktiFile = selectedFile
-        val requestFile = RequestBody.create(MediaType.parse("pdf/*"), buktiFile)
-        val buktiPart = MultipartBody.Part.createFormData("bukti", buktiFile.name, requestFile)
-        val call = apiService.updateDinas(lemburId, tanggal,masuk,pulang,pekerjaan, buktiPart)
+        val buktiPart = if (buktiFile != null) {
+            val requestFile = RequestBody.create(MediaType.parse("image/*"), buktiFile)
+            MultipartBody.Part.createFormData("profile", buktiFile.name, requestFile)
+        } else {
+            null
+        }
+        val call = apiService.updateLembur(lemburId, tanggal,masuk,pulang,pekerjaan, buktiPart)
         call.enqueue(object : Callback<ApiResponse> {
             override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
                 if (response.isSuccessful) {
@@ -1028,8 +1171,12 @@ class PreviewDialogFragment: DialogFragment() {
         val kategori = createPartFromString(acIzin.text.toString())
         val alasan = createPartFromString(TIAlasan.editText?.text.toString())
         val buktiFile = selectedFile
-        val requestFile = RequestBody.create(MediaType.parse("pdf/*"), buktiFile)
-        val buktiPart = MultipartBody.Part.createFormData("bukti", buktiFile.name, requestFile)
+        val buktiPart = if (buktiFile != null) {
+            val requestFile = RequestBody.create(MediaType.parse("image/*"), buktiFile)
+            MultipartBody.Part.createFormData("profile", buktiFile.name, requestFile)
+        } else {
+            null
+        }
         val call = apiService.updateIzin(izinId, tanggal, kategori, alasan, buktiPart)
         call.enqueue(object : Callback<ApiResponse> {
             override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
