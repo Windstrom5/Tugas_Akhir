@@ -296,7 +296,7 @@ class LemburAdapter(
                             val jsonObject = dataArray.getJSONObject(i)
                             val jamString = jsonObject.optString("jam") // Get timestamp as string
                             val jamDate = dateFormat.parse(jamString) // Parse string to Date
-                            Log.d("LemburLogTimeStamp", Date(jsonObject.optLong("jam")).toString())
+                            Log.d("LemburLogTimeStamp", jamDate.toString())
                             val sessionLembur = session_lembur(
                                 id = jsonObject.optInt("id"),
                                 id_lembur = jsonObject.optInt("id_lembur"),

@@ -122,34 +122,65 @@ class PreviewDialogFragment: DialogFragment() {
         val waktuMasukMinutes = (waktuMasuk.hours * 60) + waktuMasuk.minutes
         val waktuPulangMinutes = (waktuPulang.hours * 60) + waktuPulang.minutes
 
-        val differenceInMinutes = waktuPulangMinutes - waktuMasukMinutes
-        val sessionCount = (differenceInMinutes + 59) / 60
+        // Calculate the total difference in minutes between waktuMasuk and waktuPulang
+        val totalMinutesDifference = waktuPulangMinutes - waktuMasukMinutes
+        val sessionCount = totalMinutesDifference / 60 // Calculate full-hour sessions
 
         val timeFormatter = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
 
         for (i in 1..sessionCount) {
+            // Start of the session
             val sessionStart = Time(waktuMasuk.time + (i - 1) * 3600000)
-            val sessionEnd = if (i == sessionCount) waktuPulang else Time(waktuMasuk.time + i * 3600000)
+
+            // End of the session
+            val sessionEnd = if (i == sessionCount) {
+                Time(waktuMasuk.time + totalMinutesDifference * 60000) // Exact waktuPulang for the last session
+            } else {
+                Time(waktuMasuk.time + i * 3600000) // Full-hour sessions
+            }
 
             val sessionStartString = timeFormatter.format(sessionStart)
             val sessionEndString = timeFormatter.format(sessionEnd)
 
+            // Add session to the list
             sessions.add("Sesi $i" to (sessionStartString to sessionEndString))
 
+            // Calculate session start and end in minutes
             val sessionStartMinutes = (sessionStart.hours * 60) + sessionStart.minutes
             val sessionEndMinutes = (sessionEnd.hours * 60) + sessionEnd.minutes
 
+            // Determine the closest session to the current time
             if (currentTimeMinutes > sessionStartMinutes && currentTimeMinutes <= sessionEndMinutes) {
                 closestSessionIndex = i - 1
             }
         }
 
+        // Handle the last session if it's less than a full hour
+        val remainingMinutes = totalMinutesDifference % 60
+        if (remainingMinutes > 0 && remainingMinutes >= 30) {
+            // Add the last partial session if it is more than or equal to 30 minutes
+            val lastSessionStart = Time(waktuMasuk.time + sessionCount * 3600000)
+            val lastSessionEnd = waktuPulang
+
+            val lastSessionStartString = timeFormatter.format(lastSessionStart)
+            val lastSessionEndString = timeFormatter.format(lastSessionEnd)
+
+            sessions.add("Sesi ${sessionCount + 1}" to (lastSessionStartString to lastSessionEndString))
+
+            if (currentTimeMinutes > lastSessionStart.hours * 60 + lastSessionStart.minutes &&
+                currentTimeMinutes <= lastSessionEnd.hours * 60 + lastSessionEnd.minutes) {
+                closestSessionIndex = sessionCount // The last partial session
+            }
+        }
+
+        // Ensure there's a valid closest session index
         if (closestSessionIndex == -1) {
             closestSessionIndex = sessionCount - 1
         }
 
         return Pair(sessions, closestSessionIndex)
     }
+
 
     private fun updateButtonsAndLayout(startTime: String, endTime: String) {
         val acceptButton = view?.findViewById<Button>(R.id.acceptButton)
