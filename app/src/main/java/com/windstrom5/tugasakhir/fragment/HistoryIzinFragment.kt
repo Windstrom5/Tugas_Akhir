@@ -60,6 +60,7 @@ class HistoryIzinFragment : Fragment() {
             perusahaan?.let { fetchDataPerusahaanFromApi(it.nama) }
             swipeRefreshLayout.setOnRefreshListener {
                 perusahaan?.let { fetchDataPerusahaanFromApi(it.nama) }
+                swipeRefreshLayout.isRefreshing = false
             }
         }else{
             role?.let { Log.d("Role2", it) }
@@ -67,6 +68,7 @@ class HistoryIzinFragment : Fragment() {
             swipeRefreshLayout.setOnRefreshListener {
                 Log.d("perusahaaan2",pekerja.toString())
                 perusahaan?.let { pekerja?.let { it1 -> fetchDataPekerjaFromApi(it.nama, it1.nama) } }
+                swipeRefreshLayout.isRefreshing = false
             }
         }
         searchEditText = view.findViewById(R.id.searchEditText)

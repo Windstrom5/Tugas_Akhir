@@ -164,7 +164,7 @@ interface ApiService {
         @Part bukti: MultipartBody.Part?
     ): Call<ApiResponse>
     @Multipart
-    @POST("Lembur/UpdateDataLembur/{dinasId}?_method=PUT")
+    @POST("Lembur/UpdateDataLembur/{lemburId}?_method=PUT")
     fun updateLembur(
         @Path("lemburId") lemburId: Int,
         @Part("tanggal") tanggal: RequestBody,

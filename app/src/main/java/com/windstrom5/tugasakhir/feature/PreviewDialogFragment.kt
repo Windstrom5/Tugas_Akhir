@@ -92,7 +92,7 @@ import java.util.Locale
 class PreviewDialogFragment: DialogFragment() {
     private val PICK_PDF_OR_IMAGE_REQUEST_CODE = 100
     private val PICK_IMAGE_REQUEST_CODE = 123
-    private lateinit var selectedFile: File
+    private var selectedFile: File? = null
     private var lembur: LemburItem? = null
     private var dinas: DinasItem? = null
     private var izin: IzinItem? = null
@@ -425,7 +425,7 @@ class PreviewDialogFragment: DialogFragment() {
         val keterangan = createPartFromString(pekerjaan?.editText?.text.toString())
         val buktifile = selectedFile
         val requestFile = RequestBody.create(MediaType.parse("image/*"), buktifile)
-        val buktipart = MultipartBody.Part.createFormData("bukti", buktifile.name, requestFile)
+        val buktipart = MultipartBody.Part.createFormData("bukti", buktifile?.name, requestFile)
         val call = apiService.AddSessionLembur(id_lembur,jam,keterangan,buktipart)
         call.enqueue(object : Callback<ApiResponse> {
             override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {

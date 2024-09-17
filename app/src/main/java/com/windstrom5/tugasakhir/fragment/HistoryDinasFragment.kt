@@ -62,11 +62,13 @@ class HistoryDinasFragment : Fragment() {
             perusahaan?.let { fetchDataPerusahaanFromApi(it.nama) }
             swipeRefreshLayout.setOnRefreshListener {
                 perusahaan?.let { fetchDataPerusahaanFromApi(it.nama) }
+                swipeRefreshLayout.isRefreshing = false
             }
         }else{
             perusahaan?.let { pekerja?.let { it1 -> fetchDataPekerjaFromApi(it.nama, it1.nama) } }
             swipeRefreshLayout.setOnRefreshListener {
                 perusahaan?.let { pekerja?.let { it1 -> fetchDataPekerjaFromApi(it.nama, it1.nama) } }
+                swipeRefreshLayout.isRefreshing = false
             }
         }
         searchEditText = view.findViewById(R.id.searchEditText)
