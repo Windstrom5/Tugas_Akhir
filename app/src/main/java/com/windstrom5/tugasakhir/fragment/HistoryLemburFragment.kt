@@ -65,13 +65,11 @@ class HistoryLemburFragment : Fragment(){
             perusahaan?.let { fetchDataPerusahaanFromApi(it.nama) }
             swipeRefreshLayout.setOnRefreshListener {
                 perusahaan?.let { fetchDataPerusahaanFromApi(it.nama) }
-                swipeRefreshLayout.isRefreshing = false
             }
         }else{
             perusahaan?.let { fetchDataPerusahaanFromApi(it.nama) }
             swipeRefreshLayout.setOnRefreshListener {
                 perusahaan?.let { pekerja?.let { it1 -> fetchDataPekerjaFromApi(it.nama, it1.nama) } }
-                swipeRefreshLayout.isRefreshing = false
             }
         }
         searchEditText = view.findViewById(R.id.searchEditText)
@@ -87,14 +85,15 @@ class HistoryLemburFragment : Fragment(){
         })
         return view
     }
-    private fun fetchDataPekerjaFromApi(namaPerusahaan: String,nama_pekerja: String) {
+    private fun fetchDataPekerjaFromApi(namaPerusahaan: String, nama_pekerja: String) {
         val url = "http://192.168.1.6:8000/api/"
         val retrofit = Retrofit.Builder()
             .baseUrl(url)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
         val apiService = retrofit.create(ApiService::class.java)
-        val call = apiService.getDataLemburPekerja(namaPerusahaan,nama_pekerja)
+        val call = apiService.getDataLemburPekerja(namaPerusahaan, nama_pekerja)
+
         call.enqueue(object : Callback<ResponseBody> {
             override fun onResponse(call: Call<ResponseBody>, response: Response<ResponseBody>) {
                 if (response.isSuccessful) {
@@ -104,6 +103,7 @@ class HistoryLemburFragment : Fragment(){
                             val responseData = JSONObject(jsonResponse)
                             val dataArray = responseData.getJSONArray("data")
                             val statusWithLemburMap = mutableMapOf<String, MutableList<LemburItem>>()
+
                             for (i in 0 until dataArray.length()) {
                                 val jsonObject = dataArray.getJSONObject(i)
                                 val status = jsonObject.getString("status")
@@ -115,7 +115,7 @@ class HistoryLemburFragment : Fragment(){
                                     jsonObject.getInt("id_pekerja"),
                                     jsonObject.getString("nama_pekerja"),
                                     jsonObject.getString("nama_perusahaan"),
-                                    Date(jsonObject.getLong("tanggal")),
+                                    tanggalDate,
                                     Time.valueOf(jsonObject.getString("waktu_masuk")),
                                     Time.valueOf(jsonObject.getString("waktu_pulang")),
                                     jsonObject.getString("pekerjaan"),
@@ -133,35 +133,46 @@ class HistoryLemburFragment : Fragment(){
                                 historyLembur(entry.key, entry.value)
                             }
 
-                            // Populate ExpandableListView with data
-                            val expandableListView =
-                                view?.findViewById<ExpandableListView>(R.id.expandableListView)
-                            val adapter = perusahaan?.let {
-                                LemburAdapter(
-                                    it,
-                                    requireContext(),
-                                    statusWithLemburList,
-                                    "Pekerja"
-                                )
+                            val expandableListView = view?.findViewById<ExpandableListView>(R.id.expandableListView)
+                            val adapter = expandableListView?.adapter as? LemburAdapter
+
+                            if (adapter != null) {
+                                Log.d("FetchData", "Clearing old data")
+                                adapter.clearData() // Clear old data
+                                Log.d("FetchData", "Updating new data")
+                                adapter.updateData(statusWithLemburList) // Set new data
+                            } else {
+                                Log.d("FetchData", "Setting new adapter")
+                                val newAdapter = perusahaan?.let {
+                                    LemburAdapter(
+                                        it,
+                                        requireContext(),
+                                        statusWithLemburList,
+                                        "Pekerja"
+                                    )
+                                }
+                                expandableListView?.setAdapter(newAdapter)
                             }
-                            expandableListView?.setAdapter(adapter)
+
                             swipeRefreshLayout.isRefreshing = false
                         } catch (e: JSONException) {
                             Log.e("FetchDataError", "Error parsing JSON: ${e.message}")
+                            swipeRefreshLayout.isRefreshing = false
                         }
                     }
                 } else {
-                    // Handle unsuccessful response
                     Log.e("FetchDataError", "Failed to fetch data: ${response.code()}")
+                    swipeRefreshLayout.isRefreshing = false
                 }
             }
 
             override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
-                // Handle network failures
                 Log.e("FetchDataError", "Failed to fetch data: ${t.message}")
+                swipeRefreshLayout.isRefreshing = false
             }
         })
     }
+
 
     private fun fetchDataPerusahaanFromApi(namaPerusahaan: String) {
         val url = "http://192.168.1.6:8000/api/"
@@ -182,11 +193,12 @@ class HistoryLemburFragment : Fragment(){
                             val responseData = JSONObject(jsonResponse)
                             val dataArray = responseData.getJSONArray("data")
                             val statusWithLemburMap = mutableMapOf<String, MutableList<LemburItem>>()
+                            val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
                             for (i in 0 until dataArray.length()) {
                                 val jsonObject = dataArray.getJSONObject(i)
                                 val status = jsonObject.getString("status")
-                                val tanggal = jsonObject.getString("tanggal")
-                                val tanggalDate = parseDate(tanggal)
+                                val tanggalString = jsonObject.getString("tanggal")
+                                val tanggalDate = parseDate(tanggalString)
                                 val lembur = LemburItem(
                                     jsonObject.getInt("id"),
                                     jsonObject.getInt("id_perusahaan"),
@@ -225,11 +237,13 @@ class HistoryLemburFragment : Fragment(){
                             swipeRefreshLayout.isRefreshing = false
                         } catch (e: JSONException) {
                             Log.e("FetchDataError", "Error parsing JSON: ${e.message}")
+                            swipeRefreshLayout.isRefreshing = false
                         }
                     }
                 } else {
                     // Handle unsuccessful response
                     Log.e("FetchDataError", "Failed to fetch data: ${response.code()}")
+                    swipeRefreshLayout.isRefreshing = false
                 }
             }
 

@@ -67,6 +67,17 @@ class LemburAdapter(
         // Notify the adapter with the filtered data
         notifyDataSetChanged()
     }
+    fun clearData() {
+        originalStatusWithLemburList = emptyList()
+        statusWithLemburList = emptyList()
+        notifyDataSetChanged()
+    }
+
+    fun updateData(newData: List<historyLembur>) {
+        originalStatusWithLemburList = newData
+        statusWithLemburList = newData
+        notifyDataSetChanged()
+    }
     override fun getGroupCount(): Int {
         return statusWithLemburList.size
     }
