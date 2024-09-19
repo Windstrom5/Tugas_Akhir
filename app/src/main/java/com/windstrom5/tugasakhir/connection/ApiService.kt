@@ -142,7 +142,11 @@ interface ApiService {
         @Query("id") id: Int,
         @Query("status") status: String
     ): Call<ApiResponse>
-
+    @POST("Lembur/Session/UpdateStatus?_method=PUT")
+    fun updatestatusSesi(
+        @Query("id") id: Int,
+        @Query("status") status: String
+    ): Call<ApiResponse>
     @POST("Dinas/UpdateStatusDinas?_method=PUT")
     fun updatestatusDinas(
         @Query("id") id: Int,

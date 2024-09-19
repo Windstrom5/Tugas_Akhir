@@ -53,7 +53,17 @@ class DinasAdapter(
         // Notify the adapter with the filtered data
         notifyDataSetChanged()
     }
+    fun clearData() {
+        originalStatusWithDinasList = emptyList()
+        statusWithDinasList = emptyList()
+        notifyDataSetChanged()
+    }
 
+    fun updateData(newData: List<historyDinas>) {
+        originalStatusWithDinasList = newData
+        statusWithDinasList = newData
+        notifyDataSetChanged()
+    }
     override fun getGroupCount(): Int {
         return statusWithDinasList.size
     }

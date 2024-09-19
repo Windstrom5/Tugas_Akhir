@@ -15,6 +15,7 @@ import android.widget.ExpandableListView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.windstrom5.tugasakhir.R
 import com.windstrom5.tugasakhir.adapter.DinasAdapter
+import com.windstrom5.tugasakhir.adapter.LemburAdapter
 import com.windstrom5.tugasakhir.connection.ApiService
 import com.windstrom5.tugasakhir.feature.PreviewDialogFragment
 import com.windstrom5.tugasakhir.model.Admin
@@ -62,13 +63,11 @@ class HistoryDinasFragment : Fragment() {
             perusahaan?.let { fetchDataPerusahaanFromApi(it.nama) }
             swipeRefreshLayout.setOnRefreshListener {
                 perusahaan?.let { fetchDataPerusahaanFromApi(it.nama) }
-                swipeRefreshLayout.isRefreshing = false
             }
         }else{
             perusahaan?.let { pekerja?.let { it1 -> fetchDataPekerjaFromApi(it.nama, it1.nama) } }
             swipeRefreshLayout.setOnRefreshListener {
                 perusahaan?.let { pekerja?.let { it1 -> fetchDataPekerjaFromApi(it.nama, it1.nama) } }
-                swipeRefreshLayout.isRefreshing = false
             }
         }
         searchEditText = view.findViewById(R.id.searchEditText)
@@ -133,22 +132,29 @@ class HistoryDinasFragment : Fragment() {
                                     statusWithDinasMap[status] = mutableListOf(dinas)
                                 }
                             }
-
+                            val expandableListView = view?.findViewById<ExpandableListView>(R.id.expandableListView)
+                            val adapter = expandableListView?.adapter as? DinasAdapter
                             // Convert the map to a list of StatusWithDinas objects
-                            statusWithDinasList = statusWithDinasMap.map { entry ->
+                            val statusWithDinasList = statusWithDinasMap.map { entry ->
                                 historyDinas(entry.key, entry.value)
                             }
-
-                            // Populate ExpandableListView with data
-                            adapter = perusahaan?.let {
-                                DinasAdapter(
-                                    it,
-                                    requireContext(),
-                                    statusWithDinasList!!,
-                                    "Pekerja"
-                                )
-                            }!!
-                            expandableListView.setAdapter(adapter)
+                            if (adapter != null) {
+                                Log.d("FetchData", "Clearing old data")
+                                adapter.clearData() // Clear old data
+                                Log.d("FetchData", "Updating new data")
+                                adapter.updateData(statusWithDinasList) // Set new data
+                            } else {
+                                Log.d("FetchData", "Setting new adapter")
+                                val newAdapter = perusahaan?.let {
+                                    DinasAdapter(
+                                        it,
+                                        requireContext(),
+                                        statusWithDinasList,
+                                        "Pekerja"
+                                    )
+                                }
+                                expandableListView?.setAdapter(newAdapter)
+                            }
                             swipeRefreshLayout.isRefreshing = false
                         } catch (e: JSONException) {
                             Log.e("FetchDataError", "Error parsing JSON: ${e.message}")
@@ -220,20 +226,26 @@ class HistoryDinasFragment : Fragment() {
                                     }
 
                                     // Convert the map to a list of StatusWithDinas objects
-                                    statusWithDinasList = statusWithDinasMap.map { entry ->
+                                    val statusWithDinasList = statusWithDinasMap.map { entry ->
                                         historyDinas(entry.key, entry.value)
                                     }
-
-                                    // Populate ExpandableListView with data
-                                    adapter = perusahaan?.let {
-                                        DinasAdapter(
-                                            it,
-                                            requireContext(),
-                                            statusWithDinasList!!,
-                                            "Pekerja"
-                                        )
-                                    }!!
-                                    expandableListView.setAdapter(adapter)
+                                    if (adapter != null) {
+                                        Log.d("FetchData", "Clearing old data")
+                                        adapter.clearData() // Clear old data
+                                        Log.d("FetchData", "Updating new data")
+                                        adapter.updateData(statusWithDinasList) // Set new data
+                                    } else {
+                                        Log.d("FetchData", "Setting new adapter")
+                                        val newAdapter = perusahaan?.let {
+                                            DinasAdapter(
+                                                it,
+                                                requireContext(),
+                                                statusWithDinasList,
+                                                "Pekerja"
+                                            )
+                                        }
+                                        expandableListView?.setAdapter(newAdapter)
+                                    }
                                     swipeRefreshLayout.isRefreshing = false
                                 } catch (e: JSONException) {
                                     Log.e("FetchDataError", "Error parsing JSON: ${e.message}")

@@ -20,6 +20,7 @@ import com.android.volley.toolbox.JsonArrayRequest
 import com.android.volley.toolbox.Volley
 import com.windstrom5.tugasakhir.R
 import com.windstrom5.tugasakhir.adapter.AbsenAdapter
+import com.windstrom5.tugasakhir.adapter.DinasAdapter
 import com.windstrom5.tugasakhir.connection.ApiService
 import com.windstrom5.tugasakhir.model.Absen
 import com.windstrom5.tugasakhir.model.AbsenItem
@@ -66,16 +67,16 @@ class HistoryAbsenFragment : Fragment() {
         adapter = perusahaan?.let { AbsenAdapter(it,requireContext(), filteredList, role ?: "") }!!
         expandableListView.setAdapter(adapter)
         if(admin != null){
+            Log.d("FetchDataAdmin", admin.toString())
             perusahaan?.let { fetchDataPerusahaanFromApi(it.nama) }
             swipeRefreshLayout.setOnRefreshListener {
                 perusahaan?.let { fetchDataPerusahaanFromApi(it.nama) }
-                swipeRefreshLayout.isRefreshing = false
             }
         }else{
+            Log.d("FetchDataPekerja", pekerja.toString())
             perusahaan?.let { pekerja?.let { it1 -> fetchDataPekerjaFromApi(it.nama, it1.nama) } }
             swipeRefreshLayout.setOnRefreshListener {
                 perusahaan?.let { pekerja?.let { it1 -> fetchDataPekerjaFromApi(it.nama, it1.nama) } }
-                swipeRefreshLayout.isRefreshing = false
             }
         }
         searchEditText = view.findViewById(R.id.searchEditText)
@@ -142,20 +143,27 @@ class HistoryAbsenFragment : Fragment() {
                             }
 
                             // Convert the map to a list of StatusWithAbsen objects
-                            statusWithAbsenList = statusWithAbsenMap.map { entry ->
+                            val statusWithAbsenList = statusWithAbsenMap.map { entry ->
                                 historyAbsen(entry.key, entry.value)
                             }
-
-                            // Populate ExpandableListView with data
-                            adapter = perusahaan?.let {
-                                AbsenAdapter(
-                                    it,
-                                    requireContext(),
-                                    statusWithAbsenList!!,
-                                    "Pekerja"
-                                )
-                            }!!
-                            expandableListView.setAdapter(adapter)
+                            if (adapter != null) {
+                                Log.d("FetchData", "Clearing old data")
+                                adapter.clearData() // Clear old data
+                                Log.d("FetchData", "Updating new data")
+                                adapter.updateData(statusWithAbsenList) // Set new data
+                            } else {
+                                Log.d("FetchData", "Setting new adapter")
+                                Log.d("FetchData", "Pekerja")
+                                val newAdapter = perusahaan?.let {
+                                    AbsenAdapter(
+                                        it,
+                                        requireContext(),
+                                        statusWithAbsenList,
+                                        "Pekerja"
+                                    )
+                                }
+                                expandableListView?.setAdapter(newAdapter)
+                            }
                             swipeRefreshLayout.isRefreshing = false
                         } catch (e: JSONException) {
                             Log.e("FetchDataError", "Error parsing JSON: ${e.message}")
@@ -228,20 +236,27 @@ class HistoryAbsenFragment : Fragment() {
                             }
 
                             // Convert the map to a list of StatusWithAbsen objects
-                            statusWithAbsenList = statusWithAbsenMap.map { entry ->
+                            val statusWithAbsenList = statusWithAbsenMap.map { entry ->
                                 historyAbsen(entry.key, entry.value)
                             }
 
-                            // Populate ExpandableListView with data
-                            adapter = perusahaan?.let {
-                                AbsenAdapter(
-                                    it,
-                                    requireContext(),
-                                    statusWithAbsenList!!,
-                                    "Pekerja"
-                                )
-                            }!!
-                            expandableListView.setAdapter(adapter)
+                            if (adapter != null) {
+                                Log.d("FetchData", "Clearing old data")
+                                adapter.clearData() // Clear old data
+                                Log.d("FetchData", "Updating new data")
+                                adapter.updateData(statusWithAbsenList) // Set new data
+                            } else {
+                                Log.d("FetchData", "Setting new adapter")
+                                val newAdapter = perusahaan?.let {
+                                    AbsenAdapter(
+                                        it,
+                                        requireContext(),
+                                        statusWithAbsenList,
+                                        "Admin"
+                                    )
+                                }
+                                expandableListView?.setAdapter(newAdapter)
+                            }
                             swipeRefreshLayout.isRefreshing = false
                         } catch (e: JSONException) {
                             Log.e("FetchDataError", "Error parsing JSON: ${e.message}")
@@ -280,8 +295,10 @@ class HistoryAbsenFragment : Fragment() {
             perusahaan = arguments.getParcelable("perusahaan")
             role = arguments.getString("role")
             if(role.toString() == "Admin"){
+                Log.d("FetchDataAdmin", admin.toString())
                 admin = arguments.getParcelable("user")
             }else{
+                Log.d("FetchDataPekerja", pekerja.toString())
                 pekerja = arguments.getParcelable("user")
             }
         } else {

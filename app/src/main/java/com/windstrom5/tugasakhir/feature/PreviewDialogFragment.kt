@@ -100,6 +100,8 @@ class PreviewDialogFragment: DialogFragment() {
     private var perusahaan:Perusahaan? = null
     private var category: String? = null
     private var isTIMasukFilled = false
+    private var sesilembur: Int? = null
+    private var islast:Boolean?= null
     private var sessionList: List<session_lembur>? = null
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -121,6 +123,7 @@ class PreviewDialogFragment: DialogFragment() {
         intent.type = "image/*"
         startActivityForResult(intent, PICK_IMAGE_REQUEST_CODE)
     }
+
     private fun calculateSessionsAdmin(
         waktuMasuk: Time,
         waktuPulang: Time,
@@ -134,48 +137,53 @@ class PreviewDialogFragment: DialogFragment() {
         val waktuMasukMinutes = (waktuMasuk.hours * 60) + waktuMasuk.minutes
         val waktuPulangMinutes = (waktuPulang.hours * 60) + waktuPulang.minutes
 
-        // Calculate the total difference in minutes between waktuMasuk and waktuPulang
         val totalMinutesDifference = waktuPulangMinutes - waktuMasukMinutes
-        val sessionCount = totalMinutesDifference / 60 // Calculate full-hour sessions
+        val sessionCount = totalMinutesDifference / 60
 
         val timeFormatter = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
 
         for (i in 1..sessionCount) {
-            // Start of the session
             val sessionStart = Time(waktuMasuk.time + (i - 1) * 3600000)
-
-            // End of the session
             val sessionEnd = if (i == sessionCount) {
-                Time(waktuMasuk.time + totalMinutesDifference * 60000) // Exact waktuPulang for the last session
+                Time(waktuMasuk.time + totalMinutesDifference * 60000)
             } else {
-                Time(waktuMasuk.time + i * 3600000) // Full-hour sessions
+                Time(waktuMasuk.time + i * 3600000)
             }
 
             val sessionStartString = timeFormatter.format(sessionStart)
             val sessionEndString = timeFormatter.format(sessionEnd)
 
-            // Check if this session exists in the session_lembur list
+            // Find matching lembur session
             val lemburSession = sessionLemburList?.find { session ->
-                val lemburTime = Time(session.jam.time)
-                lemburTime == sessionStart // Compare the times
+                val lemburTime = Time(session.jam.time) // Convert session.jam to Time object
+
+                Log.d("lemburAdminLog", "Formatted Lembur Time: ${timeFormatter.format(lemburTime)}")
+                Log.d("lemburAdminLog", "Session Start: $sessionStartString")
+                Log.d("lemburAdminLog", "Session End: $sessionEndString")
+
+                // Break down lemburTime, sessionStart, and sessionEnd into hours and minutes
+                val lemburMinutes = lemburTime.hours * 60 + lemburTime.minutes
+                val sessionStartMinutes = sessionStart.hours * 60 + sessionStart.minutes
+                val sessionEndMinutes = sessionEnd.hours * 60 + sessionEnd.minutes
+
+                // Check if lemburTime is between sessionStart and sessionEnd
+                lemburMinutes in sessionStartMinutes..sessionEndMinutes
             }
 
-            // If the session exists in session_lembur, add it to the list
+            Log.d("lemburAdminLog", "Waktu Masuk: ${timeFormatter.format(waktuMasuk)}")
+            Log.d("lemburAdminLog", "Waktu Pulang: ${timeFormatter.format(waktuPulang)}")
+            Log.d("lemburAdminLog", "Session List: $sessionLemburList")
+            Log.d("lemburAdminLog", "Matched Session: $lemburSession")
+
             if (lemburSession != null) {
                 sessions.add("Sesi $i" to (sessionStartString to sessionEndString))
 
-                // Calculate session start and end in minutes
-                val sessionStartMinutes = (sessionStart.hours * 60) + sessionStart.minutes
-                val sessionEndMinutes = (sessionEnd.hours * 60) + sessionEnd.minutes
-
-                // Determine the closest session to the current time
-                if (currentTimeMinutes > sessionStartMinutes && currentTimeMinutes <= sessionEndMinutes) {
-                    closestSessionIndex = i - 1
-                }
+                // Update the closest session index to the latest matching session
+                closestSessionIndex = i - 1
             }
         }
 
-        // Handle the last session if it's less than a full hour
+        // Handle last partial session
         val remainingMinutes = totalMinutesDifference % 60
         if (remainingMinutes > 0 && remainingMinutes >= 30) {
             val lastSessionStart = Time(waktuMasuk.time + sessionCount * 3600000)
@@ -186,22 +194,20 @@ class PreviewDialogFragment: DialogFragment() {
 
             val lemburSession = sessionLemburList?.find { session ->
                 val lemburTime = Time(session.jam.time)
-                lemburTime == lastSessionStart // Compare the times
+                lemburTime.hours == lastSessionStart.hours && lemburTime.minutes == lastSessionStart.minutes
             }
 
             if (lemburSession != null) {
                 sessions.add("Sesi ${sessionCount + 1}" to (lastSessionStartString to lastSessionEndString))
 
-                if (currentTimeMinutes > lastSessionStart.hours * 60 + lastSessionStart.minutes &&
-                    currentTimeMinutes <= lastSessionEnd.hours * 60 + lastSessionEnd.minutes) {
-                    closestSessionIndex = sessionCount // The last partial session
-                }
+                // Update the closest session to the last partial session if found
+                closestSessionIndex = sessionCount
             }
         }
 
-        // Ensure there's a valid closest session index
-        if (closestSessionIndex == -1) {
-            closestSessionIndex = sessionCount - 1
+        // Default closest session to last found matched session if none is closer
+        if (closestSessionIndex == -1 && sessions.isNotEmpty()) {
+            closestSessionIndex = sessions.size - 1
         }
 
         return Pair(sessions, closestSessionIndex)
@@ -335,6 +341,81 @@ class PreviewDialogFragment: DialogFragment() {
             // Hide option layout
         }
     }
+    private fun updateSessionAdminDetails(selectedSession: Pair<String, Pair<String, String>>) {
+        val startTime = selectedSession.second.first
+        val endTime = selectedSession.second.second
+
+        // Check for matching sessions
+        if (sessionList != null) {
+            val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+
+            // Parse the startTime and endTime from the selected session
+            val startTimeDate = timeFormat.parse(startTime)
+            val endTimeDate = timeFormat.parse(endTime)
+
+            // Find the matching session based on the selected start and end time
+            val matchingSessions = sessionList?.filter { session ->
+                // Extract the time part from session.jam
+                val sessionTime = timeFormat.format(session.jam)
+                val sessionTimeDate = timeFormat.parse(sessionTime)
+
+                Log.d("LemburLog", "Session time: $sessionTime")
+                Log.d("LemburLog", "Start time: ${timeFormat.format(startTimeDate)}, End time: ${timeFormat.format(endTimeDate)}")
+
+                // Compare the session time to the selected start and end times
+                sessionTimeDate.after(startTimeDate) && sessionTimeDate.before(endTimeDate)
+            }
+
+            Log.d("LemburLog", "Matching sessions found: ${matchingSessions?.toString()}")
+            val acceptButton = view?.findViewById<Button>(R.id.acceptButton)
+            val rejectButton = view?.findViewById<Button>(R.id.rejectButton)
+            val option = view?.findViewById<LinearLayout>(R.id.option)
+            option?.visibility = View.GONE
+            if (matchingSessions != null && matchingSessions.isNotEmpty()) {
+                val firstMatchingSession = matchingSessions.first()
+                sesilembur = firstMatchingSession.id
+                // Update the keterangan field
+                view?.findViewById<TextInputLayout>(R.id.keteranganInputLayout)?.editText?.setText(firstMatchingSession.keterangan)
+                if(firstMatchingSession.status == "Pending"){
+                    acceptButton?.setText("Confirm")
+                    rejectButton?.setText("Reject")
+                    rejectButton?.visibility=View.VISIBLE
+                    acceptButton?.isEnabled=true
+                }else{
+                    acceptButton?.setText("Data Has Been " + firstMatchingSession.status)
+                    rejectButton?.visibility=View.GONE
+                    acceptButton?.isEnabled=false
+                }
+                // Load image based on matching session
+                val imageView = view?.findViewById<ImageView>(R.id.imageView)
+                val url = "http://192.168.1.6:8000/api/Lembur/Session/decryptBukti/${firstMatchingSession.id}"
+
+                val imageRequest = ImageRequest(
+                    url,
+                    { response ->
+                        imageView?.setImageBitmap(response)
+                    },
+                    0, 0, ImageView.ScaleType.CENTER_CROP, Bitmap.Config.RGB_565,
+                    { error ->
+                        error.printStackTrace()
+                    }
+                )
+                imageView?.visibility = View.VISIBLE
+                val requestQueue = Volley.newRequestQueue(requireContext())
+                requestQueue.add(imageRequest)
+            } else {
+                Log.d("LemburLog", "No matching sessions found.")
+                Log.d("LemburLog", "$startTimeDate - $endTimeDate")
+                val imageView = view?.findViewById<ImageView>(R.id.imageView)
+                imageView?.visibility = View.GONE
+                view?.findViewById<TextInputLayout>(R.id.keteranganInputLayout)?.editText?.setText("")
+                val change = view?.findViewById<Button>(R.id.changeFile)
+                change?.setOnClickListener {
+                    pickImageFromGallery()
+                }
+            }
+        }
+    }
 
     private fun updateSessionDetails(selectedSession: Pair<String, Pair<String, String>>) {
         val startTime = selectedSession.second.first
@@ -359,14 +440,13 @@ class PreviewDialogFragment: DialogFragment() {
                 // Compare only the time portion (ignoring the date)
                 sessionTimeDate.after(startTimeDate) && sessionTimeDate.before(endTimeDate)
             }
-
+            Log.d("LemburLog", "Matching sessions found: ${matchingSessions?.toString()}")
             if (matchingSessions != null && matchingSessions.isNotEmpty()) {
-                Log.d("LemburLog", "Matching sessions found: ${matchingSessions.size}")
-
                 val firstMatchingSession = matchingSessions.first()
 
                 // Update the keterangan field
                 view?.findViewById<TextInputLayout>(R.id.keteranganInputLayout)?.editText?.setText(firstMatchingSession.keterangan)
+
                 val dateFormatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 //                val tanggalFormatted = dateFormatter.format(firstMatchingSession.jam)
 //                view?.findViewById<TextInputLayout>(R.id.tanggalInputLayout)?.editText?.setText(tanggalFormatted)
@@ -387,9 +467,6 @@ class PreviewDialogFragment: DialogFragment() {
                 imageView?.visibility =View.VISIBLE
                 val requestQueue = Volley.newRequestQueue(requireContext())
                 requestQueue.add(imageRequest)
-
-                // Set up button actions for existing session
-                setupButtonsForExistingSession(firstMatchingSession)
             } else {
                 Log.d("LemburLog", "No matching sessions found.")
                 Log.d("LemburLog", startTimeDate.toString() + " - " + endTimeDate.toString())
@@ -405,26 +482,33 @@ class PreviewDialogFragment: DialogFragment() {
             }
         }
 
-        // Update the tanggalInputLayout with the session start and end times
-//        val formattedText = "${lembur?.tanggal.toString()} | Start: $startTime | End: $endTime"
-
-
-        // Update the buttons and layout based on the selected session time
         updateButtonsAndLayout(startTime, endTime)
     }
 
     private fun setupButtonsForExistingSession(matchingSession: session_lembur) {
         val acceptButton = view?.findViewById<Button>(R.id.acceptButton)
         val rejectButton = view?.findViewById<Button>(R.id.rejectButton)
+        if(category == "session_admin"){
+            acceptButton?.setOnClickListener {
+                updateDataSesi()
+            }
 
-        acceptButton?.setOnClickListener {
-            updateDataSesi()
+            rejectButton?.setOnClickListener {
+                // Handle cancel or rejection of session
+                dismiss()
+            }
+        }else{
+            acceptButton?.setOnClickListener {
+                updateDataSesi()
+            }
+
+            rejectButton?.setOnClickListener {
+                // Handle cancel or rejection of session
+                dismiss()
+            }
         }
 
-        rejectButton?.setOnClickListener {
-            // Handle cancel or rejection of session
-            dismiss()
-        }
+
     }
 
     private fun setupButtonsForNewSession() {
@@ -551,8 +635,6 @@ class PreviewDialogFragment: DialogFragment() {
                 namaInputLayout.isEnabled = false
                 namaInputLayout.editText?.setText(dinas?.nama_pekerja)
                 val dateFormatter = SimpleDateFormat("dd MMMM yyyy", Locale("id", "ID"))
-                val option = view.findViewById<LinearLayout>(R.id.option)
-                option.visibility= View.GONE
                 val tanggalBerangkatFormatted = dateFormatter.format(dinas?.tanggal_berangkat)
                 val tanggalPulangFormatted = dateFormatter.format(dinas?.tanggal_pulang)
                 val berangkatInputLayout = view.findViewById<TextInputLayout>(R.id.berangkatInputLayout)
@@ -597,8 +679,6 @@ class PreviewDialogFragment: DialogFragment() {
                 berangkatInputLayout.endIconMode = TextInputLayout.END_ICON_CUSTOM
                 berangkatInputLayout.endIconDrawable = endIconDrawable
                 pulangInputLayout.endIconMode = TextInputLayout.END_ICON_CUSTOM
-                val option = view.findViewById<LinearLayout>(R.id.option)
-                option.visibility= View.VISIBLE
                 val delete = view.findViewById<CircularProgressButton>(R.id.deleteButton)
                 delete.setOnClickListener{
                     PopupDialog.getInstance(requireContext())
@@ -681,8 +761,8 @@ class PreviewDialogFragment: DialogFragment() {
                 view.findViewById<TextInputLayout>(R.id.namaInputLayout).editText?.setText(lembur?.nama_pekerja)
                 view.findViewById<TextInputLayout>(R.id.tanggalInputLayout).editText?.setText(lembur?.tanggal.toString())
                 view.findViewById<TextInputLayout>(R.id.masukInputLayout).editText?.setText(lembur?.waktu_masuk.toString())
-                view.findViewById<TextInputLayout>(R.id.pulangInputLayout).editText?.setText(lembur?.waktu_pulang.toString())
-                view.findViewById<TextInputLayout>(R.id.kegiatanEditText).editText?.setText(lembur?.pekerjaan)
+                view.findViewById<TextInputLayout>(R.id.keluarInputLayout).editText?.setText(lembur?.waktu_pulang.toString())
+                view.findViewById<TextInputLayout>(R.id.kegiatanInputLayout).editText?.setText(lembur?.pekerjaan)
                 val imageView = view.findViewById<ImageView>(R.id.imageView)
                 imageView.visibility = View.VISIBLE
                 val url =
@@ -742,6 +822,14 @@ class PreviewDialogFragment: DialogFragment() {
                 if (sessions.isNotEmpty()) {
                     acSesi.setText(sessions[closestSessionIndex].first, false)
                     updateSessionDetails(sessions[closestSessionIndex])
+                    val optionLayout = view?.findViewById<LinearLayout>(R.id.option)
+                    if (closestSessionIndex == sessions.size - 1) {
+                        optionLayout?.visibility = View.VISIBLE
+                        islast = true
+                    } else {
+                        optionLayout?.visibility = View.GONE
+                        islast = false
+                    }
                 }
 
                 // Update session details when a session is selected from the dropdown
@@ -750,19 +838,24 @@ class PreviewDialogFragment: DialogFragment() {
                     val optionLayout = view?.findViewById<LinearLayout>(R.id.option)
                     if (position == sessions.size - 1) {
                         optionLayout?.visibility = View.VISIBLE
+                        islast = true
                     } else {
                         optionLayout?.visibility = View.GONE
+                        islast = false
                     }
                     updateSessionDetails(selectedSession)
                 }
             } else if(category == "session_admin") {
+                val textview = view.findViewById<TextView>(R.id.not_found)
+                val scrollView = view.findViewById<ScrollView>(R.id.scrollview)
                 if(sessionList == null){
-                    val textview = view.findViewById<TextView>(R.id.not_found)
-                    val scrollView = view.findViewById<ScrollView>(R.id.scrollview)
                     textview?.visibility = View.VISIBLE
                     scrollView?.visibility = View.GONE
                 }else{
+                    textview?.visibility = View.GONE
+                    scrollView?.visibility = View.VISIBLE
                     val acSesi = view.findViewById<AutoCompleteTextView>(R.id.ACsesi)
+                    Log.d("ApiResponse",sessionList.toString())
                     val (sessions, closestSessionIndex) = calculateSessionsAdmin(lembur!!.waktu_masuk, lembur!!.waktu_pulang,sessionList)
                     if (acSesi != null && sessions.isNotEmpty()) {
                         // Extract session names for the dropdown
@@ -787,22 +880,32 @@ class PreviewDialogFragment: DialogFragment() {
                     val tanggalFormatted = dateFormatter.format(lembur?.tanggal)
                     view.findViewById<TextInputLayout>(R.id.tanggalInputLayout)?.editText?.setText(tanggalFormatted)
                     view.findViewById<TextInputLayout>(R.id.namaInputLayout).editText?.setText(lembur?.nama_pekerja)
-                    // Automatically select the closest session
+                    // Update session details when a session is selected from the dropdown
                     if (sessions.isNotEmpty()) {
                         acSesi.setText(sessions[closestSessionIndex].first, false)
-                        updateSessionDetails(sessions[closestSessionIndex])
+                        updateSessionAdminDetails(sessions[closestSessionIndex])
+                        if (closestSessionIndex == sessions.size - 1) {
+                            islast = true
+                        } else {
+                            islast = false
+                        }
                     }
-
-                    // Update session details when a session is selected from the dropdown
                     acSesi.setOnItemClickListener { _, _, position, _ ->
                         val selectedSession = sessions[position]
                         val optionLayout = view?.findViewById<LinearLayout>(R.id.option)
                         if (position == sessions.size - 1) {
-                            optionLayout?.visibility = View.VISIBLE
+                            islast = true
                         } else {
-                            optionLayout?.visibility = View.GONE
+                            islast = false
                         }
-                        updateSessionDetails(selectedSession)
+                        updateSessionAdminDetails(selectedSession)
+                    }
+                    view.findViewById<Button>(R.id.acceptButton).setOnClickListener {
+                        updateStatus("Accept", "Sesi")
+                    }
+
+                    view.findViewById<Button>(R.id.rejectButton).setOnClickListener {
+                        updateStatus("Reject", "Sesi")
                     }
                 }
             }else{
@@ -1504,9 +1607,12 @@ class PreviewDialogFragment: DialogFragment() {
             id = izin?.id!!
         } else if (category == "Lembur") {
             id = lembur?.id!!
-        } else {
+        } else if(category == "Dinas"){
             id = dinas?.id!!
-        }// Assuming you have an ID associated with the item
+        }else{
+            id = sesilembur!!
+        }
+        // Assuming you have an ID associated with the item
         // Call your API to update the status
         val url = "http://192.168.1.6:8000/api/"
         // Make a network request using Retrofit
@@ -1521,8 +1627,10 @@ class PreviewDialogFragment: DialogFragment() {
             call = apiService.updatestatusIzin(id, status)
         } else if (category == "Lembur") {
             call = apiService.updatestatusLembur(id, status)
-        } else {
+        } else if (category == "Dinas") {
             call = apiService.updatestatusDinas(id, status)
+        } else{
+            call = apiService.updatestatusSesi(id,status)
         }
         call.enqueue(object : Callback<ApiResponse> {
             override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {

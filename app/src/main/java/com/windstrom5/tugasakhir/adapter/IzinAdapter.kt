@@ -23,7 +23,6 @@ import com.windstrom5.tugasakhir.model.IzinItem
 import com.windstrom5.tugasakhir.model.LemburItem
 import com.windstrom5.tugasakhir.model.Pekerja
 import com.windstrom5.tugasakhir.model.Perusahaan
-import com.windstrom5.tugasakhir.model.historyDinas
 import com.windstrom5.tugasakhir.model.historyIzin
 import com.windstrom5.tugasakhir.model.historyLembur
 import java.io.File
@@ -46,14 +45,25 @@ class IzinAdapter (
         statusWithIzinList = if (lowerCaseQuery.isEmpty()) {
             originalStatusWithIzinList
         } else {
-            originalStatusWithIzinList.filter { historyDinas ->
-                historyDinas.izinList.any { dinas ->
-                    dinas.id.toString().contains(lowerCaseQuery)
+            originalStatusWithIzinList.filter { historyIzin ->
+                historyIzin.izinList.any { Izin ->
+                    Izin.id.toString().contains(lowerCaseQuery)
                 }
             }
         }
 
         // Notify the adapter with the filtered data
+        notifyDataSetChanged()
+    }
+    fun clearData() {
+        originalStatusWithIzinList = emptyList()
+        statusWithIzinList = emptyList()
+        notifyDataSetChanged()
+    }
+
+    fun updateData(newData: List<historyIzin>) {
+        originalStatusWithIzinList = newData
+        statusWithIzinList = newData
         notifyDataSetChanged()
     }
     override fun getGroupCount(): Int {

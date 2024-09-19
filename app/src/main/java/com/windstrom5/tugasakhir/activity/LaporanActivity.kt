@@ -89,6 +89,7 @@ class LaporanActivity : AppCompatActivity() {
     private var pekerjaList: MutableList<Pekerja> = mutableListOf()
     private lateinit var suggestionsCardView: CardView
     private lateinit var suggestionsText: TextView
+    private lateinit var expand: TextView
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityLaporanBinding.inflate(layoutInflater)
@@ -99,6 +100,7 @@ class LaporanActivity : AppCompatActivity() {
         getBundle()
         jenis = binding.ACJenis
         data = binding.ACData
+
         bulan = binding.ACBulan
         tahun = binding.ACTahun
         pegawai = binding.ACPegawai
@@ -236,8 +238,8 @@ class LaporanActivity : AppCompatActivity() {
 //    }
     private fun generateChart(selectedJenis: String, selectedData: String) {
         val selectedBulan = bulan.text.toString()  // Retrieve selected month, if any
-    val selectedTahun = tahun.text.toString()  // Retrieve selected year, if any
-    val selectedPegawai = pegawai.text.toString()  // Retrieve selected employee or check if empty
+        val selectedTahun = tahun.text.toString()  // Retrieve selected year, if any
+        val selectedPegawai = pegawai.text.toString()  // Retrieve selected employee or check if empty
         val selectedChartType = chartList.text.toString()  // Retrieve selected chart type
 
         val entries = processDataForChart(selectedJenis, selectedData)  // Fetch relevant entries
@@ -308,7 +310,8 @@ class LaporanActivity : AppCompatActivity() {
 
         // Draw the chart using the configured model
         chart.aa_drawChartWithChartModel(aaChartModel)
-    }
+        generate.revertAnimation()
+}
 
     private fun buildChartTitle(
         jenis: String,

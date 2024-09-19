@@ -149,10 +149,12 @@ class LemburAdapter(
         val now = Calendar.getInstance().time
         val jamMasuk = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).parse(lembur.waktu_masuk.toString()) ?: Date()
         jam.text = "$jammasuk - $jamkeluar"
+        Log.d("FetchData",Role)
         when {
             Role == "Admin" && lembur.status == "Pending" -> {
                 actionButton.visibility = View.VISIBLE
                 actionButton.text = "Respond \nLembur"
+                Log.d("Role2","Admin")
             }
             Role == "Admin" && lembur.status == "Accept" -> {
                 actionButton.visibility = View.VISIBLE

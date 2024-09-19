@@ -14,6 +14,7 @@ import android.widget.EditText
 import android.widget.ExpandableListView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.windstrom5.tugasakhir.R
+import com.windstrom5.tugasakhir.adapter.DinasAdapter
 import com.windstrom5.tugasakhir.adapter.IzinAdapter
 import com.windstrom5.tugasakhir.connection.ApiService
 import com.windstrom5.tugasakhir.model.Admin
@@ -60,15 +61,12 @@ class HistoryIzinFragment : Fragment() {
             perusahaan?.let { fetchDataPerusahaanFromApi(it.nama) }
             swipeRefreshLayout.setOnRefreshListener {
                 perusahaan?.let { fetchDataPerusahaanFromApi(it.nama) }
-                swipeRefreshLayout.isRefreshing = false
             }
         }else{
-            role?.let { Log.d("Role2", it) }
             pekerja?.let { fetchDataPekerjaFromApi(perusahaan!!.nama,it.nama) }
             swipeRefreshLayout.setOnRefreshListener {
                 Log.d("perusahaaan2",pekerja.toString())
                 perusahaan?.let { pekerja?.let { it1 -> fetchDataPekerjaFromApi(it.nama, it1.nama) } }
-                swipeRefreshLayout.isRefreshing = false
             }
         }
         searchEditText = view.findViewById(R.id.searchEditText)
@@ -130,18 +128,23 @@ class HistoryIzinFragment : Fragment() {
                                 historyIzin(entry.key, entry.value)
                             }
 
-                            // Populate ExpandableListView with data
-                            val expandableListView =
-                                view?.findViewById<ExpandableListView>(R.id.expandableListView)
-                            adapter = perusahaan?.let {
-                                IzinAdapter(
-                                    it,
-                                    requireContext(),
-                                    statusWithIzinList,
-                                    "Pekerja"
-                                )
-                            }!!
-                            expandableListView?.setAdapter(adapter)
+                            if (adapter != null) {
+                                Log.d("FetchData", "Clearing old data")
+                                adapter.clearData() // Clear old data
+                                Log.d("FetchData", "Updating new data")
+                                adapter.updateData(statusWithIzinList) // Set new data
+                            } else {
+                                Log.d("FetchData", "Setting new adapter")
+                                val newAdapter = perusahaan?.let {
+                                    IzinAdapter(
+                                        it,
+                                        requireContext(),
+                                        statusWithIzinList,
+                                        "Pekerja"
+                                    )
+                                }
+                                expandableListView?.setAdapter(newAdapter)
+                            }
                             swipeRefreshLayout.isRefreshing = false
                         } catch (e: JSONException) {
                             Log.e("FetchDataError", "Error parsing JSON: ${e.message}")
@@ -206,18 +209,23 @@ class HistoryIzinFragment : Fragment() {
                                 historyIzin(entry.key, entry.value)
                             }
 
-                            // Populate ExpandableListView with data
-                            val expandableListView =
-                                view?.findViewById<ExpandableListView>(R.id.expandableListView)
-                            adapter = perusahaan?.let {
-                                IzinAdapter(
-                                    it,
-                                    requireContext(),
-                                    statusWithIzinList,
-                                    "Admin"
-                                )
-                            }!!
-                            expandableListView?.setAdapter(adapter)
+                            if (adapter != null) {
+                                Log.d("FetchData", "Clearing old data")
+                                adapter.clearData() // Clear old data
+                                Log.d("FetchData", "Updating new data")
+                                adapter.updateData(statusWithIzinList) // Set new data
+                            } else {
+                                Log.d("FetchData", "Setting new adapter")
+                                val newAdapter = perusahaan?.let {
+                                    IzinAdapter(
+                                        it,
+                                        requireContext(),
+                                        statusWithIzinList,
+                                        "Admin"
+                                    )
+                                }
+                                expandableListView?.setAdapter(newAdapter)
+                            }
                             swipeRefreshLayout.isRefreshing = false
                         } catch (e: JSONException) {
                             Log.e("FetchDataError", "Error parsing JSON: ${e.message}")

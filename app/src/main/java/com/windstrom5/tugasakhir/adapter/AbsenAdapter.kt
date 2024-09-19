@@ -62,7 +62,17 @@ class AbsenAdapter(
         // Notify the adapter with the filtered data
         notifyDataSetChanged()
     }
+    fun clearData() {
+        originalStatusWithAbsenList = emptyList()
+        statusWithAbsenList = emptyList()
+        notifyDataSetChanged()
+    }
 
+    fun updateData(newData: List<historyAbsen>) {
+        originalStatusWithAbsenList = newData
+        statusWithAbsenList = newData
+        notifyDataSetChanged()
+    }
     override fun getGroupCount(): Int {
         return statusWithAbsenList.size
     }

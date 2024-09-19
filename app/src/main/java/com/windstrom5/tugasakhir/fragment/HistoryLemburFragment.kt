@@ -61,13 +61,15 @@ class HistoryLemburFragment : Fragment(){
         adapter = perusahaan?.let { LemburAdapter(it,requireContext(), filteredList, role ?: "") }!!
         expandableListView = view.findViewById(R.id.expandableListView)
         expandableListView.setAdapter(adapter)
+        Log.d("FetchDataAdmin", admin.toString())
+        Log.d("FetchDataAdmin", pekerja.toString())
         if(admin != null){
             perusahaan?.let { fetchDataPerusahaanFromApi(it.nama) }
             swipeRefreshLayout.setOnRefreshListener {
                 perusahaan?.let { fetchDataPerusahaanFromApi(it.nama) }
             }
         }else{
-            perusahaan?.let { fetchDataPerusahaanFromApi(it.nama) }
+            perusahaan?.let { pekerja?.let { it1 -> fetchDataPekerjaFromApi(it.nama, it1.nama) } }
             swipeRefreshLayout.setOnRefreshListener {
                 perusahaan?.let { pekerja?.let { it1 -> fetchDataPekerjaFromApi(it.nama, it1.nama) } }
             }
@@ -135,7 +137,7 @@ class HistoryLemburFragment : Fragment(){
 
                             val expandableListView = view?.findViewById<ExpandableListView>(R.id.expandableListView)
                             val adapter = expandableListView?.adapter as? LemburAdapter
-
+                            Log.d("FetchData", role.toString())
                             if (adapter != null) {
                                 Log.d("FetchData", "Clearing old data")
                                 adapter.clearData() // Clear old data
@@ -223,17 +225,26 @@ class HistoryLemburFragment : Fragment(){
                             }
 
                             // Populate ExpandableListView with data
-                            val expandableListView =
-                                view?.findViewById<ExpandableListView>(R.id.expandableListView)
-                            val adapter = perusahaan?.let {
-                                LemburAdapter(
-                                    it,
-                                    requireContext(),
-                                    statusWithLemburList,
-                                    "Pekerja"
-                                )
+                            val expandableListView = view?.findViewById<ExpandableListView>(R.id.expandableListView)
+                            val adapter = expandableListView?.adapter as? LemburAdapter
+
+                            if (adapter != null) {
+                                Log.d("FetchData", "Clearing old data")
+                                adapter.clearData() // Clear old data
+                                Log.d("FetchData", "Updating new data")
+                                adapter.updateData(statusWithLemburList) // Set new data
+                            } else {
+                                Log.d("FetchData", "Setting new adapter")
+                                val newAdapter = perusahaan?.let {
+                                    LemburAdapter(
+                                        it,
+                                        requireContext(),
+                                        statusWithLemburList,
+                                        "Admin"
+                                    )
+                                }
+                                expandableListView?.setAdapter(newAdapter)
                             }
-                            expandableListView?.setAdapter(adapter)
                             swipeRefreshLayout.isRefreshing = false
                         } catch (e: JSONException) {
                             Log.e("FetchDataError", "Error parsing JSON: ${e.message}")
