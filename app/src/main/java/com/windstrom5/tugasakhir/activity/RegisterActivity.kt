@@ -51,6 +51,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 import www.sanju.motiontoast.MotionToast
 import www.sanju.motiontoast.MotionToastStyle
 import java.io.File
+import java.security.MessageDigest
 import java.security.SecureRandom
 import java.sql.Time
 import java.text.SimpleDateFormat
@@ -192,7 +193,7 @@ class RegisterActivity : AppCompatActivity() {
                 secretKey,
                 autoCompleteTextView.text.toString()
             )
-            val url = "http://192.168.1.6:8000/api/"
+            val url = "http://192.168.1.5:8000/api/"
             val retrofit = Retrofit.Builder()
                 .baseUrl(url)
                 .addConverterFactory(GsonConverterFactory.create())
@@ -311,8 +312,9 @@ class RegisterActivity : AppCompatActivity() {
         startActivityForResult(intent, PICK_IMAGE_REQUEST_CODE)
     }
 
+    // Function to generate a random string and back it with MD5 hashing
     private fun generateRandomString(): String {
-        // Fetch existing secret keys from the server
+        // Fetch existing MD5-hashed secret keys from the server
         val existingSecretKeys = getSecretKeysFromApi()
 
         val charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()-_=+"
@@ -325,24 +327,27 @@ class RegisterActivity : AppCompatActivity() {
                 randomString.append(randomChar)
             }
 
-            // Check if the generated key already exists
-            if (!existingSecretKeys.contains(randomString.toString())) {
-                return randomString.toString()
+            // Compute the MD5 hash of the generated string
+            val randomStringMd5 = md5(randomString.toString())
+
+            // Check if the MD5 hash already exists in the list
+            if (!existingSecretKeys.contains(randomStringMd5)) {
+                return randomString.toString() // Return the raw string, but keep the hash on the server
             }
         }
     }
 
+    // Function to fetch secret keys (already hashed with MD5) from the API
     private fun getSecretKeysFromApi(): List<String> {
-        val apiUrl = "http://192.168.1.6:8000/api/GetPerusahaan"
-
+        val apiUrl = "http://192.168.1.5:8000/api/GetPerusahaan"
         val secretKeysList = mutableListOf<String>()
 
         val jsonArrayRequest = JsonArrayRequest(Request.Method.GET, apiUrl, null,
             { response ->
-                // Parse the JSON array and extract secret keys
+                // Parse the JSON array and extract secret keys (assumed to be hashed with MD5 already)
                 for (i in 0 until response.length()) {
-                    val secretKey = response.getString(i)
-                    secretKeysList.add(secretKey)
+                    val secretKeyHash = response.getString(i)
+                    secretKeysList.add(secretKeyHash) // These are the MD5 hashes
                 }
             },
             { error ->
@@ -354,6 +359,14 @@ class RegisterActivity : AppCompatActivity() {
 
         return secretKeysList
     }
+
+    // Function to compute MD5 hash
+    private fun md5(input: String): String {
+        val md = MessageDigest.getInstance("MD5")
+        val digest = md.digest(input.toByteArray())
+        return digest.joinToString("") { "%02x".format(it) }
+    }
+
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
@@ -416,7 +429,7 @@ class RegisterActivity : AppCompatActivity() {
     }
 
 //    private fun makeApiRequest(secretKey: String) {
-//        val url = "http://192.168.1.6:8000/api/"
+//        val url = "http://192.168.1.5:8000/api/"
 //
 //        val retrofit = Retrofit.Builder()
 //            .baseUrl(url)

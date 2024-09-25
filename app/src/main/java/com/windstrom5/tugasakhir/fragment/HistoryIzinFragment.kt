@@ -85,7 +85,7 @@ class HistoryIzinFragment : Fragment() {
     private fun fetchDataPekerjaFromApi(namaPerusahaan: String,nama_pekerja: String) {
         Log.d("perusahaaan2",namaPerusahaan)
 
-        val url = "http://192.168.1.6:8000/api/"
+        val url = "http://192.168.1.5:8000/api/"
         val retrofit = Retrofit.Builder()
             .baseUrl(url)
             .addConverterFactory(GsonConverterFactory.create())
@@ -164,7 +164,7 @@ class HistoryIzinFragment : Fragment() {
     }
 
     private fun fetchDataPerusahaanFromApi(namaPerusahaan: String) {
-        val url = "http://192.168.1.6:8000/api/"
+        val url = "http://192.168.1.5:8000/api/"
         val retrofit = Retrofit.Builder()
             .baseUrl(url)
             .addConverterFactory(GsonConverterFactory.create())

@@ -81,7 +81,7 @@ class ForgotActivity : AppCompatActivity() {
         email.editText?.addTextChangedListener(emailTextWatcher)
         sendCode.setOnClickListener {
             code = null
-            val url = "http://192.168.1.6:8000/api/"
+            val url = "http://192.168.1.5:8000/api/"
             val retrofit = Retrofit.Builder()
                 .baseUrl(url)
                 .addConverterFactory(GsonConverterFactory.create())
@@ -172,7 +172,7 @@ class ForgotActivity : AppCompatActivity() {
         retype.editText?.addTextChangedListener(retypeTextWatcher)
         save.setOnClickListener{
             val retrofit = Retrofit.Builder()
-                .baseUrl("http://192.168.1.6:8000/api/")
+                .baseUrl("http://192.168.1.5:8000/api/")
                 .addConverterFactory(GsonConverterFactory.create())
                 .build()
 

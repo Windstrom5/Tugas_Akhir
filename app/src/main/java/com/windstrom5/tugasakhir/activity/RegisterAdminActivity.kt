@@ -144,7 +144,7 @@ class RegisterAdminActivity : AppCompatActivity() {
             } else if (Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
                 Log.d("RegisterDebug", "Email format is correct")
                 setLoading(true)
-                val url = "http://192.168.1.6:8000/api/"
+                val url = "http://192.168.1.5:8000/api/"
                 val retrofit = Retrofit.Builder()
                     .baseUrl(url)
                     .addConverterFactory(GsonConverterFactory.create())
@@ -220,7 +220,7 @@ class RegisterAdminActivity : AppCompatActivity() {
         }
     }
     private fun saveData(perusahaan: Perusahaan){
-        val url = "http://192.168.1.6:8000/api/"
+        val url = "http://192.168.1.5:8000/api/"
         val retrofit = Retrofit.Builder()
             .baseUrl(url)
             .addConverterFactory(GsonConverterFactory.create())
@@ -320,7 +320,7 @@ class RegisterAdminActivity : AppCompatActivity() {
         })
     }
     private fun addPerusahaan() {
-        val url = "http://192.168.1.6:8000/api/"
+        val url = "http://192.168.1.5:8000/api/"
 
         val retrofit = Retrofit.Builder()
             .baseUrl(url)

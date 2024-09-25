@@ -98,7 +98,7 @@ class ProfileActivity : AppCompatActivity() {
                         pekerja = it.getParcelable("user")
                         if (pekerja?.profile != "null") {
                             val url =
-                                "http://192.168.1.6:8000/api/Admin/decryptProfile/${admin?.id}" // Replace with your actual URL
+                                "http://192.168.1.5:8000/api/Admin/decryptProfile/${admin?.id}" // Replace with your actual URL
 
                             val imageRequest = ImageRequest(
                                 url,
@@ -153,7 +153,7 @@ class ProfileActivity : AppCompatActivity() {
                         }
                         if (admin?.profile != "null") {
                             val imageUrl =
-                                "http://192.168.1.6:8000/storage/${admin?.profile}" // Replace with your Laravel image URL
+                                "http://192.168.1.5:8000/storage/${admin?.profile}" // Replace with your Laravel image URL
                             Glide.with(this)
                                 .load(imageUrl)
                                 .into(profile)
@@ -170,7 +170,7 @@ class ProfileActivity : AppCompatActivity() {
                         pekerja = it.getParcelable("user")
                         if (pekerja?.profile != "null") {
                             val url =
-                                "http://192.168.1.6:8000/api/Pekerja/decryptProfile/${admin?.id}" // Replace with your actual URL
+                                "http://192.168.1.5:8000/api/Pekerja/decryptProfile/${admin?.id}" // Replace with your actual URL
 
                             val imageRequest = ImageRequest(
                                 url,
@@ -224,7 +224,7 @@ class ProfileActivity : AppCompatActivity() {
                         }
                         if (admin?.profile != "null") {
                             val imageUrl =
-                                "http://192.168.1.6:8000/storage/${admin?.profile}" // Replace with your Laravel image URL
+                                "http://192.168.1.5:8000/storage/${admin?.profile}" // Replace with your Laravel image URL
                             Glide.with(this)
                                 .load(imageUrl)
                                 .into(profile)

@@ -137,7 +137,7 @@ class Tracking : Service() {
     }
 
     private fun sendLocationUpdateHandler(latitude: Double, longitude: Double, perusahaan: Perusahaan, pekerja: Pekerja) {
-        val url = "http://192.168.1.6:8000/api/Presensi/UpdateLocation"
+        val url = "http://192.168.1.5:8000/api/Presensi/UpdateLocation"
         val timestampFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ", Locale.getDefault())
         val currentTimestamp = timestampFormat.format(Date())
         val params = JSONObject().apply {

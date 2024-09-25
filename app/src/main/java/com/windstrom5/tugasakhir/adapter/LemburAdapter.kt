@@ -296,7 +296,7 @@ class LemburAdapter(
         return view
     }
     private fun fetchSessionLemburData(lemburId: Int, onSuccess: (List<session_lembur>) -> Unit, onError: (VolleyError) -> Unit) {
-        val url = "http://192.168.1.6:8000/api/Lembur/Session/GetSession/$lemburId" // Replace with your API endpoint
+        val url = "http://192.168.1.5:8000/api/Lembur/Session/GetSession/$lemburId" // Replace with your API endpoint
         val jsonObjectRequest = JsonObjectRequest(
             Request.Method.GET, url, null,
             { response ->
@@ -389,7 +389,7 @@ class LemburAdapter(
                     <header>
                         <h1>Receipt for Pekerja</h1>
                     </header>
-                    <img src="http://192.168.1.6:8000/storage/${perusahaan.logo}" alt="Perusahaan Logo" class="logo">
+                    <img src="http://192.168.1.5:8000/storage/${perusahaan.logo}" alt="Perusahaan Logo" class="logo">
                     <div class="receipt-details">\
                         <p><strong>Date Printed:</strong> ${
                         dateFormatter.format(

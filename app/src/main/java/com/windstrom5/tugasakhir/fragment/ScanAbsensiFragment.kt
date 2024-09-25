@@ -173,7 +173,7 @@ class ScanAbsensiFragment : Fragment() {
                 .into(logo)
         }else{
             val imageUrl =
-                "http://192.168.1.6:8000/storage/${perusahaan?.logo}" // Replace with your Laravel image URL
+                "http://192.168.1.5:8000/storage/${perusahaan?.logo}" // Replace with your Laravel image URL
 
             Glide.with(this)
                 .load(imageUrl)
@@ -355,7 +355,7 @@ class ScanAbsensiFragment : Fragment() {
     }
 
     private fun getAllSecretKeysFromApi(qrCode: String) {
-        val apiUrl = "http://192.168.1.6:8000/api/getAllSecretKeys"
+        val apiUrl = "http://192.168.1.5:8000/api/getAllSecretKeys"
         val jsonObjectRequest = JsonObjectRequest(
             Request.Method.GET, apiUrl, null,
             { response ->
@@ -414,7 +414,7 @@ class ScanAbsensiFragment : Fragment() {
     }
     // Check and request location permission
     private fun Presensi(perusahaan: Perusahaan, pekerja: Pekerja){
-        val url = "http://192.168.1.6:8000/api/Presensi/Absensi"
+        val url = "http://192.168.1.5:8000/api/Presensi/Absensi"
         Log.d("testing",url)
         val calendar = Calendar.getInstance()
         val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())

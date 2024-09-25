@@ -81,9 +81,9 @@ class SplashActivity : AppCompatActivity() {
     @SuppressLint("SimpleDateFormat")
     private fun fetchDataFromApi(id: Int, jenis: String, id_presensi: Int?) {
         val url = if (id_presensi == null) {
-            "http://192.168.1.6:8000/api/getData?id=$id&jenis=$jenis"
+            "http://192.168.1.5:8000/api/getData?id=$id&jenis=$jenis"
         } else {
-            "http://192.168.1.6:8000/api/getData?id=$id&jenis=$jenis&id_presensi=$id_presensi"
+            "http://192.168.1.5:8000/api/getData?id=$id&jenis=$jenis&id_presensi=$id_presensi"
         }
 
         val jsonObjectRequest = JsonObjectRequest(
@@ -283,7 +283,7 @@ class SplashActivity : AppCompatActivity() {
                 .into(logoImageView)
         } else {
             val url =
-                "http://192.168.1.6:8000/api/Perusahaan/decryptLogo/${perusahaan?.id}" // Replace with your actual URL
+                "http://192.168.1.5:8000/api/Perusahaan/decryptLogo/${perusahaan?.id}" // Replace with your actual URL
 
             val imageRequest = ImageRequest(
                 url,

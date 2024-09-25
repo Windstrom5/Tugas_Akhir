@@ -52,7 +52,7 @@ class ListAnggotaAdapter(
         fun bind(currentPekerja: Pekerja) {
             // Set data to views for Pekerja
             if (currentPekerja.profile != "null") {
-                val url = "http://192.168.1.6:8000/api/Pekerja/decryptProfile/${currentPekerja.id}"
+                val url = "http://192.168.1.5:8000/api/Pekerja/decryptProfile/${currentPekerja.id}"
 
                 // Create an ImageRequest to fetch the profile image
                 val imageRequest = ImageRequest(
@@ -104,7 +104,7 @@ class ListAnggotaAdapter(
         fun bind(currentAdmin: Admin) {
             // Set data to views for Admin
             if (currentAdmin.profile != "null") {
-                val url = "http://192.168.1.6:8000/api/Admin/decryptProfile/${currentAdmin.id}"
+                val url = "http://192.168.1.5:8000/api/Admin/decryptProfile/${currentAdmin.id}"
 
                 // Create an ImageRequest to fetch the profile image
                 val imageRequest = ImageRequest(

@@ -106,6 +106,8 @@
                                 android:layout_height="wrap_content"
                                 android:background="@color/primaryTextColor"
                                 android:hint="Jenis Fitur"
+                                android:focusable="false"
+                                android:cursorVisible="false"
                                 android:maxLines="1"
                                 android:textSize="@dimen/newsMoreTextSize" />
                         </com.google.android.material.textfield.TextInputLayout>
@@ -125,13 +127,62 @@
                                 android:id="@+id/ACData"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
+                                android:focusable="false"
+                                android:cursorVisible="false"
                                 android:background="@color/primaryTextColor"
                                 android:hint="Data Fitur"
                                 android:maxLines="1"
                                 android:textSize="@dimen/newsMoreTextSize" />
                         </com.google.android.material.textfield.TextInputLayout>
 
-                        <!-- Expandable Section for Bulan and Tahun -->
+                        <!-- Bulan and Tahun Fields (Moved to the Top) -->
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/textInputBulan"
+                            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintEnd_toStartOf="@id/textInputTahun"
+                            app:layout_constraintTop_toBottomOf="@id/textInputJenis"
+                            app:layout_constraintWidth_percent="0.4"
+                            android:layout_marginTop="16dp">
+
+                            <AutoCompleteTextView
+                                android:id="@+id/ACBulan"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:background="@color/primaryTextColor"
+                                android:focusable="false"
+                                android:cursorVisible="false"
+                                android:hint="Bulan"
+                                android:maxLines="1"
+                                android:textSize="@dimen/newsMoreTextSize" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/textInputTahun"
+                            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            app:layout_constraintStart_toEndOf="@id/textInputBulan"
+                            app:layout_constraintEnd_toEndOf="parent"
+                            app:layout_constraintTop_toTopOf="@id/textInputBulan"
+                            app:layout_constraintWidth_percent="0.4"
+                            android:layout_marginStart="10dp">
+
+                            <AutoCompleteTextView
+                                android:id="@+id/ACTahun"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:background="@color/primaryTextColor"
+                                android:focusable="false"
+                                android:cursorVisible="false"
+                                android:hint="Tahun"
+                                android:maxLines="1"
+                                android:textSize="@dimen/newsMoreTextSize" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <!-- Expandable Section for Chart and Pegawai (Kept in expandableLayout) -->
                         <LinearLayout
                             android:id="@+id/expandableLayout"
                             android:layout_marginTop="16dp"
@@ -141,53 +192,11 @@
                             android:orientation="vertical"
                             app:layout_constraintStart_toStartOf="parent"
                             app:layout_constraintEnd_toEndOf="parent"
-                            app:layout_constraintTop_toBottomOf="@id/textInputJenis">
+                            app:layout_constraintTop_toBottomOf="@id/textInputTahun">
+
                             <androidx.constraintlayout.widget.ConstraintLayout
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content">
-
-                                <!-- Top-left TextInputLayout -->
-                                <com.google.android.material.textfield.TextInputLayout
-                                    android:id="@+id/textInputBulan"
-                                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    app:layout_constraintStart_toStartOf="parent"
-                                    app:layout_constraintEnd_toStartOf="@id/textInputTahun"
-                                    app:layout_constraintTop_toTopOf="parent"
-                                    app:layout_constraintWidth_percent="0.4">
-
-                                    <AutoCompleteTextView
-                                        android:id="@+id/ACBulan"
-                                        android:layout_width="match_parent"
-                                        android:layout_height="wrap_content"
-                                        android:background="@color/primaryTextColor"
-                                        android:hint="Bulan"
-                                        android:maxLines="1"
-                                        android:textSize="@dimen/newsMoreTextSize" />
-                                </com.google.android.material.textfield.TextInputLayout>
-
-                                <!-- Top-right TextInputLayout -->
-                                <com.google.android.material.textfield.TextInputLayout
-                                    android:id="@+id/textInputTahun"
-                                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    app:layout_constraintStart_toEndOf="@id/textInputBulan"
-                                    app:layout_constraintEnd_toEndOf="parent"
-                                    app:layout_constraintTop_toTopOf="@id/textInputBulan"
-                                    app:layout_constraintWidth_percent="0.4"
-                                    android:layout_marginStart="10dp">
-
-                                    <AutoCompleteTextView
-                                        android:id="@+id/ACTahun"
-                                        android:layout_width="match_parent"
-                                        android:layout_height="wrap_content"
-                                        android:background="@color/primaryTextColor"
-                                        android:hint="Tahun"
-                                        android:maxLines="1"
-                                        android:textSize="@dimen/newsMoreTextSize" />
-                                </com.google.android.material.textfield.TextInputLayout>
 
                                 <!-- Bottom-left TextInputLayout -->
                                 <com.google.android.material.textfield.TextInputLayout
@@ -197,7 +206,7 @@
                                     android:layout_height="wrap_content"
                                     app:layout_constraintStart_toStartOf="parent"
                                     app:layout_constraintEnd_toStartOf="@id/textInputPegawai"
-                                    app:layout_constraintTop_toBottomOf="@id/textInputBulan"
+                                    app:layout_constraintTop_toTopOf="parent"
                                     app:layout_constraintWidth_percent="0.4"
                                     android:layout_marginTop="16dp">
 
@@ -206,6 +215,8 @@
                                         android:layout_width="match_parent"
                                         android:layout_height="wrap_content"
                                         android:background="@color/primaryTextColor"
+                                        android:focusable="false"
+                                        android:cursorVisible="false"
                                         android:hint="Chart"
                                         android:maxLines="1"
                                         android:textSize="@dimen/newsMoreTextSize" />
@@ -228,18 +239,17 @@
                                         android:layout_width="match_parent"
                                         android:layout_height="wrap_content"
                                         android:background="@color/primaryTextColor"
+                                        android:focusable="false"
+                                        android:cursorVisible="false"
                                         android:hint="Pegawai"
                                         android:maxLines="1"
                                         android:textSize="@dimen/newsMoreTextSize" />
                                 </com.google.android.material.textfield.TextInputLayout>
                             </androidx.constraintlayout.widget.ConstraintLayout>
-
                         </LinearLayout>
 
-                        <!-- Expand/Collapse Button -->
-
-
                     </androidx.constraintlayout.widget.ConstraintLayout>
+
                     <TextView
                         android:id="@+id/expandCollapseButton"
                         android:layout_width="wrap_content"

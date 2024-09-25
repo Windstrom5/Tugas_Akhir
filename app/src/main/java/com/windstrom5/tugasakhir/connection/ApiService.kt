@@ -267,5 +267,9 @@ interface ApiService {
         @Part("keterangan") keterangan: RequestBody,
         @Part bukti: MultipartBody.Part,
     ): Call<ApiResponse>
+    @GET("Lembur/Session/getDataSessionperusahaan/{id}")
+    fun getDataSesiPerusahaan(
+        @Path("id") id: Int
+    ): Call<ResponseBody>
 }
 

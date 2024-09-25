@@ -196,7 +196,7 @@ class LoginActivity : AppCompatActivity() {
         }
     }
 //    private fun fetchDataFromApi() {
-//        val url = "http://192.168.1.6:8000/api/GetPerusahaan"
+//        val url = "http://192.168.1.5:8000/api/GetPerusahaan"
 //        val jsonObjectRequest = JsonObjectRequest(Request.Method.GET, url, null,
 //            { response ->
 //                val perusahaanArray = response.getJSONArray("perusahaan")
@@ -309,7 +309,7 @@ class LoginActivity : AppCompatActivity() {
         login.isEnabled = isAllFieldsFilled
     }
     private fun login(email: String, password: String) {
-        val url = "http://192.168.1.6:8000/api/login"
+        val url = "http://192.168.1.5:8000/api/login"
 //        val checkBoxRememberMe = findViewById<CheckBox>(R.id.checkBoxRememberMe)
 //        val rememberMeChecked = checkBoxRememberMe.isChecked
         val sharedPreferencesManager = SharedPreferencesManager(this)
@@ -404,7 +404,7 @@ class LoginActivity : AppCompatActivity() {
                                 parseDate(user.getString("tanggal_lahir")),
                                 user.getString("profile")
                             )
-                            val url2 = "http://192.168.1.6:8000/api/"
+                            val url2 = "http://192.168.1.5:8000/api/"
                             val retrofit = Builder()
                                 .baseUrl(url2)
                                 .addConverterFactory(GsonConverterFactory.create())
@@ -562,5 +562,42 @@ class LoginActivity : AppCompatActivity() {
         vectorDrawable.draw(canvas)
         return bitmap
     }
+    private fun showErrorDialog(isJenisEmpty: Boolean, isDataEmpty: Boolean, isBulanEmpty: Boolean, isTahunEmpty: Boolean) {
+        val errorMessage = buildErrorMessage(isJenisEmpty, isDataEmpty, isBulanEmpty, isTahunEmpty)
 
+        if (errorMessage.isNotEmpty()) {
+            MotionToast.createColorToast(
+                this, // Context
+                "Error", // Title
+                errorMessage, // Message
+                MotionToastStyle.ERROR, // Error style
+                MotionToast.GRAVITY_BOTTOM, // Position
+                MotionToast.SHORT_DURATION, // Duration
+                ResourcesCompat.getFont(this, R.font.ralewaybold) // Font
+            )
+        }
+    }
+
+    private fun buildErrorMessage(isJenisEmpty: Boolean, isDataEmpty: Boolean, isBulanEmpty: Boolean, isTahunEmpty: Boolean): String {
+        val missingFields = mutableListOf<String>()
+
+        if (isJenisEmpty) {
+            missingFields.add("Jenis")
+        }
+        if (isDataEmpty) {
+            missingFields.add("Data")
+        }
+        if (isBulanEmpty) {
+            missingFields.add("Bulan")
+        }
+        if (isTahunEmpty) {
+            missingFields.add("Tahun")
+        }
+
+        return if (missingFields.isNotEmpty()) {
+            "Please fill in the following fields: ${missingFields.joinToString(", ")}"
+        } else {
+            ""
+        }
+    }
 }

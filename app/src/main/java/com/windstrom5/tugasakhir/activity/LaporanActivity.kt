@@ -10,18 +10,19 @@ import android.widget.AutoCompleteTextView
 import android.widget.Button
 import android.widget.ExpandableListView
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.cardview.widget.CardView
+import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import br.com.simplepass.loading_button_lib.customViews.CircularProgressButton
 import com.android.volley.Request
 import com.android.volley.toolbox.ImageRequest
 import com.android.volley.toolbox.JsonArrayRequest
-import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
 import com.github.aachartmodel.aainfographics.aachartcreator.AAChartModel
 import com.github.aachartmodel.aainfographics.aachartcreator.AAChartType
@@ -48,6 +49,7 @@ import com.windstrom5.tugasakhir.model.historyAbsen
 import com.windstrom5.tugasakhir.model.historyDinas
 import com.windstrom5.tugasakhir.model.historyIzin
 import com.windstrom5.tugasakhir.model.historyLembur
+import com.windstrom5.tugasakhir.model.session_lembur
 import de.hdodenhof.circleimageview.CircleImageView
 import okhttp3.ResponseBody
 import org.apache.commons.lang3.time.DateUtils.parseDate
@@ -60,6 +62,8 @@ import retrofit2.Callback
 import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import www.sanju.motiontoast.MotionToast
+import www.sanju.motiontoast.MotionToastStyle
 import java.sql.Date
 import java.sql.Time
 import java.text.SimpleDateFormat
@@ -83,6 +87,7 @@ class LaporanActivity : AppCompatActivity() {
     private var admin: Admin? = null
     private var izinItemList: MutableList<IzinItem> = mutableListOf()
     private var lemburItemList: MutableList<LemburItem> = mutableListOf()
+    private var sesilemburItemList: MutableList<session_lembur> = mutableListOf()
     private var dinasItemList: MutableList<DinasItem> = mutableListOf()
     private var presensiItemList: MutableList<AbsenItem> = mutableListOf()
     private var perusahaan: Perusahaan? = null
@@ -90,6 +95,9 @@ class LaporanActivity : AppCompatActivity() {
     private lateinit var suggestionsCardView: CardView
     private lateinit var suggestionsText: TextView
     private lateinit var expand: TextView
+    private lateinit var expandableLayout:LinearLayout
+    private lateinit var btnToggleExpand:TextView
+    private var isExpanded = false
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityLaporanBinding.inflate(layoutInflater)
@@ -100,7 +108,8 @@ class LaporanActivity : AppCompatActivity() {
         getBundle()
         jenis = binding.ACJenis
         data = binding.ACData
-
+        expandableLayout = binding.expandableLayout
+        btnToggleExpand = binding.expandCollapseButton
         bulan = binding.ACBulan
         tahun = binding.ACTahun
         pegawai = binding.ACPegawai
@@ -111,57 +120,161 @@ class LaporanActivity : AppCompatActivity() {
         suggestionsText = findViewById(R.id.suggestionsText)
         setupAutoCompleteTextViews()
         getData()
+        btnToggleExpand.setOnClickListener {
+            // Toggle the expand/collapse state
+            isExpanded = !isExpanded
+
+            if (isExpanded) {
+                // Show the expandable layout
+                expandableLayout.visibility = View.VISIBLE
+                // Change the button text to "Collapse"
+                btnToggleExpand.text = "Collapse"
+            } else {
+                // Hide the expandable layout
+                expandableLayout.visibility = View.GONE
+                // Change the button text to "Expand"
+                btnToggleExpand.text = "Expand"
+            }
+        }
         generate.setOnClickListener {
             val selectedJenis = jenis.text.toString()
-            val selectedData = data.text.toString()
-
-            if (selectedJenis.isEmpty() || selectedData.isEmpty()) {
-//                showErrorDialog(selectedJenis.isEmpty(), selectedData.isEmpty())
+            val selectedDataShort = data.text.toString()
+            val selectedData = getFullDescription(selectedJenis, selectedDataShort)
+            val selectedBulan = bulan.text.toString()  // Retrieve selected month, if any
+            val selectedTahun = tahun.text.toString()
+            if (selectedJenis.isEmpty() || selectedData.isEmpty() || selectedBulan.isEmpty() || selectedTahun.isEmpty()) {
+                showErrorDialog(selectedJenis.isEmpty(), selectedData.isEmpty(),selectedBulan.isEmpty(),selectedTahun.isEmpty())
             } else {
                 generate.startAnimation()
-                generateChart(selectedJenis, selectedData)
+                generateChart(selectedJenis, selectedData,selectedBulan,selectedTahun)
             }
         }
 
     }
 
-    private fun processDataForChart(selectedJenis: String, selectedData: String): List<Entry> {
+    private fun processDataForChart(selectedJenis: String, selectedData: String,selectedBulan: String,selectedTahun: String): List<Entry> {
         return when (selectedJenis) {
-            "lembur" -> processLemburData(selectedData)
+            "lembur" -> processLemburData(selectedData,selectedBulan,selectedTahun)
 //            "dinas"-> processDinasData(selectedData)
 //            "izin"-> processIzinData(selectedData)
 //            "presensi"-> processPresensiData(selectedData)
             else -> emptyList()
         }
     }
-    private fun processLemburData(selectedData: String): List<Entry> {
-        val entries = mutableListOf<Entry>()
-        when (selectedData) {
+    private fun buildErrorMessage(isJenisEmpty: Boolean, isDataEmpty: Boolean, isBulanEmpty: Boolean, isTahunEmpty: Boolean): String {
+        val missingFields = mutableListOf<String>()
+
+        if (isJenisEmpty) {
+            missingFields.add("Jenis")
+        }
+        if (isDataEmpty) {
+            missingFields.add("Data")
+        }
+        if (isBulanEmpty) {
+            missingFields.add("Bulan")
+        }
+        if (isTahunEmpty) {
+            missingFields.add("Tahun")
+        }
+
+        return if (missingFields.isNotEmpty()) {
+            "Please fill in the following fields: ${missingFields.joinToString(", ")}"
+        } else {
+            ""
+        }
+    }
+    private fun showErrorDialog(isJenisEmpty: Boolean, isDataEmpty: Boolean, isBulanEmpty: Boolean, isTahunEmpty: Boolean) {
+        val errorMessage = buildErrorMessage(isJenisEmpty, isDataEmpty, isBulanEmpty, isTahunEmpty)
+
+        if (errorMessage.isNotEmpty()) {
+            MotionToast.createColorToast(
+                this, // Context
+                "Error", // Title
+                errorMessage, // Message
+                MotionToastStyle.ERROR, // Error style
+                MotionToast.GRAVITY_BOTTOM, // Position
+                MotionToast.SHORT_DURATION, // Duration
+                ResourcesCompat.getFont(this, R.font.ralewaybold) // Font
+            )
+        }
+    }
+    private fun processLemburData(selectedData: String, selectedBulan: String, selectedTahun: String): List<Entry> {
+        // Create a mapping from month names to their corresponding numeric values
+        Log.d("TestChart",selectedData+selectedBulan+selectedTahun)
+        val monthMapping = mapOf(
+            "January" to 1,
+            "February" to 2,
+            "March" to 3,
+            "April" to 4,
+            "May" to 5,
+            "June" to 6,
+            "July" to 7,
+            "August" to 8,
+            "September" to 9,
+            "October" to 10,
+            "November" to 11,
+            "December" to 12
+        )
+
+        // Get the month number from the selected month name
+        val selectedMonth = monthMapping[selectedBulan]
+
+        // Convert selected year to Int (if provided)
+        val selectedYear = selectedTahun.toIntOrNull()
+
+        // Filter lembur items based on the selected month and year
+        val filteredLemburItems = lemburItemList.filter { lembur ->
+            val calendar = Calendar.getInstance()
+            calendar.time = lembur.tanggal  // Assuming lembur.tanggal is a Date object
+
+            val lemburMonth = calendar.get(Calendar.MONTH) + 1  // Calendar.MONTH is 0-based
+            val lemburYear = calendar.get(Calendar.YEAR)
+
+            // Filter by month and year (if provided)
+            (selectedMonth == null || selectedMonth == lemburMonth) &&
+                    (selectedYear == null || selectedYear == lemburYear)
+        }
+
+        return when (selectedData) {
             "total lembur" -> {
-                val lemburByEmployee = lemburItemList.groupBy { it.id_pekerja }
-                lemburByEmployee.forEach { (id_pekerja, lemburItems) ->
-                    val totalLembur = lemburItems.map { it.getLemburDuration() }.sum() // Calculate total lembur for each employee
-                    entries.add(Entry(id_pekerja?.toFloat() ?: 0f, totalLembur.toFloat()))
-                }
+                // Group by employee and calculate total lembur duration
+                filteredLemburItems.groupBy { it.id_pekerja }
+                    .map { (id, lemburItems) ->
+                        Entry(
+                            id?.toFloat() ?: 0f,
+                            lemburItems.sumOf { it.getLemburDuration().toDouble() }.toFloat()
+                        )
+                    }
             }
             "rata-rata lembur" -> {
-                val lemburByEmployee = lemburItemList.groupBy { it.id_pekerja }
-                lemburByEmployee.forEach { (id_pekerja, lemburItems) ->
-                    val averageLembur = lemburItems.map { it.getLemburDuration() }.average()
-                    entries.add(Entry(id_pekerja?.toFloat() ?: 0f, averageLembur.toFloat()))
-                }
+                // Group by employee and calculate average lembur duration
+                filteredLemburItems.groupBy { it.id_pekerja }
+                    .map { (id, lemburItems) ->
+                        Entry(
+                            id?.toFloat() ?: 0f,
+                            lemburItems.map { it.getLemburDuration() }.average().toFloat()
+                        )
+                    }
             }
             "distribusi lembur" -> {
-                lemburItemList.forEach { lembur ->
-                    val xValue = lembur.tanggal.time.toFloat() // Use timestamp for x-axis
-                    val yValue = lembur.getLemburDuration().toFloat()
-                    entries.add(Entry(xValue, yValue))
+                // Map each lembur item to a chart entry based on the index (or another field)
+                filteredLemburItems.mapIndexed { index, lembur ->
+                    Entry(index.toFloat(), lembur.getLemburDuration().toFloat())
                 }
             }
+            else -> emptyList()
         }
-        return entries
     }
-    private fun generateSuggestions(entries: List<Entry>, selectedData: String): String {
+
+    private fun generateSuggestions(
+        entries: List<Entry>,
+        selectedData: String,
+        selectedBulan: String,
+        selectedTahun: String
+    ): String {
+        // Use the selected month and year in suggestions
+        val monthYearText = "untuk bulan $selectedBulan tahun $selectedTahun"
+
         return when (selectedData) {
             "total lembur" -> {
                 val totalLembur = entries.map { it.y }.sum()
@@ -171,12 +284,12 @@ class LaporanActivity : AppCompatActivity() {
                 val employeesWithExcessiveLembur = entries.filter { it.y > excessiveLemburThreshold }
 
                 val excessiveMessage = if (employeesWithExcessiveLembur.isNotEmpty()) {
-                    "Perhatian: ${employeesWithExcessiveLembur.size} karyawan bekerja lembur lebih dari $excessiveLemburThreshold jam. Pertimbangkan untuk mengevaluasi beban kerja atau menambah staf."
+                    "Perhatian: ${employeesWithExcessiveLembur.size} karyawan bekerja lembur lebih dari $excessiveLemburThreshold jam $monthYearText. Pertimbangkan untuk mengevaluasi beban kerja atau menambah staf."
                 } else {
-                    "Tidak ada karyawan yang melebihi lembur $excessiveLemburThreshold jam. Pemakaian lembur masih dalam batas normal."
+                    "Tidak ada karyawan yang melebihi lembur $excessiveLemburThreshold jam $monthYearText. Pemakaian lembur masih dalam batas normal."
                 }
 
-                "Total lembur keseluruhan adalah $totalLembur jam.\nRata-rata lembur per karyawan adalah ${"%.2f".format(averageLembur)} jam.\n$excessiveMessage"
+                "Total lembur keseluruhan $monthYearText adalah $totalLembur jam.\nRata-rata lembur per karyawan adalah ${"%.2f".format(averageLembur)} jam.\n$excessiveMessage"
             }
             "rata-rata lembur" -> {
                 val averageLembur = entries.map { it.y }.average()
@@ -184,21 +297,22 @@ class LaporanActivity : AppCompatActivity() {
                 val employeesWithLowLembur = entries.filter { it.y < belowOptimalThreshold }
 
                 val underUtilizationMessage = if (employeesWithLowLembur.isNotEmpty()) {
-                    "Beberapa karyawan memiliki lembur di bawah rata-rata ${belowOptimalThreshold} jam, pertimbangkan apakah tugas mereka bisa dialihkan untuk meningkatkan produktivitas."
+                    "Beberapa karyawan memiliki lembur di bawah rata-rata $belowOptimalThreshold jam $monthYearText, pertimbangkan apakah tugas mereka bisa dialihkan untuk meningkatkan produktivitas."
                 } else {
-                    "Penggunaan lembur sudah merata di antara karyawan."
+                    "Penggunaan lembur sudah merata di antara karyawan $monthYearText."
                 }
 
-                "Rata-rata lembur keseluruhan adalah ${"%.2f".format(averageLembur)} jam.\n$underUtilizationMessage"
+                "Rata-rata lembur keseluruhan $monthYearText adalah ${"%.2f".format(averageLembur)} jam.\n$underUtilizationMessage"
             }
             "distribusi lembur" -> {
-                "Distribusi lembur menunjukkan pola lembur karyawan pada berbagai waktu. Analisis ini dapat membantu untuk merencanakan lembur di masa depan dengan lebih efisien."
+                "Distribusi lembur $monthYearText menunjukkan pola lembur karyawan pada berbagai waktu. Analisis ini dapat membantu untuk merencanakan lembur di masa depan dengan lebih efisien."
             }
             else -> {
-                "Tidak ada data yang relevan untuk ditampilkan."
+                "Tidak ada data yang relevan untuk ditampilkan $monthYearText."
             }
         }
     }
+
 
     private fun LemburItem.getLemburDuration(): Int {
         val durationInMillis = waktu_pulang.time - waktu_masuk.time
@@ -236,63 +350,36 @@ class LaporanActivity : AppCompatActivity() {
 //        }
 //        return entries
 //    }
-    private fun generateChart(selectedJenis: String, selectedData: String) {
-        val selectedBulan = bulan.text.toString()  // Retrieve selected month, if any
-        val selectedTahun = tahun.text.toString()  // Retrieve selected year, if any
+    private fun generateChart(selectedJenis: String, selectedData: String, selectedBulan: String, selectedTahun: String) {
         val selectedPegawai = pegawai.text.toString()  // Retrieve selected employee or check if empty
         val selectedChartType = chartList.text.toString()  // Retrieve selected chart type
 
-        val entries = processDataForChart(selectedJenis, selectedData)  // Fetch relevant entries
-        val suggestions = generateSuggestions(entries, selectedData)
+        val entries = processLemburData(selectedData, selectedBulan, selectedTahun)  // Fetch relevant entries
+        Log.d("TestChart",selectedData+selectedBulan+selectedTahun)
+        val suggestions = generateSuggestions(entries, selectedData, selectedBulan, selectedTahun)
         suggestionsCardView = findViewById(R.id.suggestionsCardView)
         suggestionsText = findViewById(R.id.suggestionsText)
         suggestionsText.text = suggestions
         suggestionsCardView.visibility = if (suggestions.isNotEmpty()) View.VISIBLE else View.GONE
-        // Determine the chart type, defaulting to Bar if none selected
-        val chartType = if (selectedChartType.isNotEmpty()) {
-            AAChartType.valueOf(selectedChartType.replace(" ", ""))
-        } else {
-            AAChartType.Bar
+
+            // Determine the chart type, defaulting to Bar if none selected
+        val chartType = when (selectedChartType) {
+            "Bar" -> AAChartType.Bar
+            "Line" -> AAChartType.Line
+            "Pie" -> AAChartType.Pie
+            "Scatter" -> AAChartType.Scatter
+            "Polygon" -> AAChartType.Polygon  // Since Heat Map isn't directly available
+            else -> AAChartType.Bar  // Default to Bar if none selected
         }
 
-        // Initialize categories and data arrays
-        val categories: Array<String>
-        val data: Array<Float>
 
-        // Filter entries based on the selected month and year
-        val filteredEntries = entries.filter { entry ->
-            val calendar = Calendar.getInstance()
-            calendar.timeInMillis = entry.x.toLong()
-            val entryYear = calendar.get(Calendar.YEAR).toString()
-            val entryMonth = (calendar.get(Calendar.MONTH) + 1).toString().padStart(2, '0')  // Ensure 2-digit month format
-
-            // Filter by selected month and/or year
-            (selectedBulan.isEmpty() || selectedBulan == entryMonth) &&
-                    (selectedTahun.isEmpty() || selectedTahun == entryYear)
-        }
-
-        // Handle different x-axis labels based on the selection of month and year
-        if (selectedBulan.isNotEmpty() && selectedTahun.isNotEmpty()) {
-            // If both month and year are selected, show days of the month on the x-axis
-            categories = filteredEntries.map { entry ->
-                val calendar = Calendar.getInstance()
-                calendar.timeInMillis = entry.x.toLong()
-                calendar.get(Calendar.DAY_OF_MONTH).toString()
-            }.toTypedArray()
-        } else if (selectedTahun.isNotEmpty()) {
-            // If only year is selected, show months of that year on the x-axis
-            categories = filteredEntries.map { entry ->
-                val calendar = Calendar.getInstance()
-                calendar.timeInMillis = entry.x.toLong()
-                calendar.getDisplayName(Calendar.MONTH, Calendar.SHORT, Locale.getDefault())
-            }.toTypedArray()
-        } else {
-            // If no month or year specified, show employee names or other relevant data
-            categories = filteredEntries.map { entry -> getEmployeeNameById(entry.x.toInt()) }.toTypedArray()
-        }
+    // Convert x-values (which are employee IDs) to employee names for categories
+        val categories = entries.map { entry ->
+            getEmployeeNameById(entry.x.toInt())  // Convert employee ID (x) to name
+        }.toTypedArray()
 
         // Map the y-values for the chart data
-        data = filteredEntries.map { it.y }.toTypedArray()
+        val data = entries.map { it.y }.toTypedArray()
 
         // Construct the chart title dynamically based on selected options
         val chartTitle = buildChartTitle(selectedJenis, selectedData, selectedBulan, selectedTahun, selectedPegawai)
@@ -301,17 +388,31 @@ class LaporanActivity : AppCompatActivity() {
         val aaChartModel = AAChartModel()
             .chartType(chartType)
             .title(chartTitle)  // Use the dynamic title
-            .categories(categories)
+            .categories(categories)  // Use names as categories on the x-axis
             .series(arrayOf(
                 AASeriesElement()
                     .name(selectedData)
-                    .data(arrayOf(data))
+                    .data(data as Array<Any>)  // Set y-values as chart data
             ))
 
         // Draw the chart using the configured model
         chart.aa_drawChartWithChartModel(aaChartModel)
         generate.revertAnimation()
-}
+    }
+
+
+    private fun getYAxisTitle(selectedJenis: String, selectedData: String): String {
+        return when (selectedJenis) {
+            "lembur" -> when (selectedData) {
+                "total lembur" -> "Total Jam Lembur"
+                "rata-rata lembur" -> "Rata-rata Jam Lembur"
+                "distribusi lembur" -> "Jam Lembur"
+                else -> "Nilai"
+            }
+            // Add cases for other jenis when implemented
+            else -> "Nilai"
+        }
+    }
 
     private fun buildChartTitle(
         jenis: String,
@@ -358,9 +459,13 @@ class LaporanActivity : AppCompatActivity() {
         return "$dataTitle - $jenisTitle ($timePeriod, $pegawaiTitle)"
     }
 
+    private fun getEmployeeNameById(employeeId: Int): String {
+        return pekerjaList.find { it.id == employeeId }?.nama ?: "Unknown"
+    }
     private fun setupAutoCompleteTextViews() {
         val jenisOptions = arrayOf("lembur", "dinas", "izin", "presensi", "all")
-        val chartOptions = arrayOf("Bar Chart", "Line Chart", "Pie Chart", "Scatter Plot", "Heat Map")
+        val chartOptions = arrayOf("Bar", "Line", "Pie", "Scatter", "Polygon")
+
 
         val jenisAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, jenisOptions)
         val chartAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, chartOptions)
@@ -381,29 +486,76 @@ class LaporanActivity : AppCompatActivity() {
     }
 
     private fun updatePegawaiAdapter(selectedJenis: String) {
-        val pegawaiNames = when (selectedJenis) {
-            "lembur" -> lemburItemList.map { it.id_pekerja }
-            "dinas" -> dinasItemList.flatMap { listOf(it.id_pekerja) } // List with both nama_pekerja
-            "izin" -> izinItemList.map { it.id_pekerja }
-            "presensi" -> presensiItemList.map { it.id_pekerja }
+        val pegawaiNamesWithIds = when (selectedJenis) {
+            "lembur" -> lemburItemList.map { Pair(it.id_pekerja, it.nama_pekerja) }
+            "dinas" -> dinasItemList.map { Pair(it.id_pekerja, it.nama_pekerja) }
+            "izin" -> izinItemList.map { Pair(it.id_pekerja, it.nama_pekerja) }
+            "presensi" -> presensiItemList.map { Pair(it.id_pekerja, it.nama_pekerja) }
             else -> emptyList()
-        }.distinct() ?: emptyList()
+        }.distinctBy { it.first }
 
+        val pegawaiNames = pegawaiNamesWithIds.map { it.second }
         val pegawaiAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, pegawaiNames)
         pegawai.setAdapter(pegawaiAdapter)
+
+        // Store the mapping of names to IDs for later use
+        val nameToIdMap = pegawaiNamesWithIds.associate { it.second to it.first }
+        pegawai.setOnItemClickListener { _, _, position, _ ->
+            val selectedName = pegawaiNames[position]
+            val selectedId = nameToIdMap[selectedName]
+            // You can use selectedId when you need the ID for database queries
+        }
     }
+    private val lemburOptionsMap = mapOf(
+        "Total" to "total lembur",
+        "Rata-rata" to "rata-rata lembur",
+        "Distribusi" to "distribusi lembur"
+    )
+
+    private val dinasOptionsMap = mapOf(
+        "Total" to "total dinas",
+        "Rata-rata" to "rata-rata durasi dinas",
+        "Distribusi" to "distribusi dinas"
+    )
+
+    private val izinOptionsMap = mapOf(
+        "Total" to "total izin",
+        "Rata-rata" to "rata-rata izin",
+        "Jenis" to "jenis izin"
+    )
+
+    private val presensiOptionsMap = mapOf(
+        "Kehadiran" to "tingkat kehadiran",
+        "Ketidakhadiran" to "jumlah ketidakhadiran",
+        "Pola" to "pola kehadiran"
+    )
+
+    private val allOptionsMap = mapOf(
+        "Produktivitas" to "produktivitas keseluruhan"
+    )
 
 
     private fun getDataOptions(selectedJenis: String): Array<String> {
         return when (selectedJenis) {
-            "lembur" -> arrayOf("total lembur", "rata-rata lembur", "distribusi lembur")
-            "dinas" -> arrayOf("total dinas", "rata-rata durasi dinas", "distribusi dinas")
-            "izin" -> arrayOf("total izin", "rata-rata izin", "jenis izin")
-            "presensi" -> arrayOf("tingkat kehadiran", "jumlah ketidakhadiran", "pola kehadiran")
-            "all" -> arrayOf("produktivitas keseluruhan")
+            "lembur" -> lemburOptionsMap.keys.toTypedArray()  // Show short labels
+            "dinas" -> dinasOptionsMap.keys.toTypedArray()
+            "izin" -> izinOptionsMap.keys.toTypedArray()
+            "presensi" -> presensiOptionsMap.keys.toTypedArray()
+            "all" -> allOptionsMap.keys.toTypedArray()
             else -> arrayOf()
         }
     }
+    private fun getFullDescription(selectedJenis: String, selectedDataShort: String): String {
+        return when (selectedJenis) {
+            "lembur" -> lemburOptionsMap[selectedDataShort] ?: ""
+            "dinas" -> dinasOptionsMap[selectedDataShort] ?: ""
+            "izin" -> izinOptionsMap[selectedDataShort] ?: ""
+            "presensi" -> presensiOptionsMap[selectedDataShort] ?: ""
+            "all" -> allOptionsMap[selectedDataShort] ?: ""
+            else -> ""
+        }
+    }
+
     private fun generateDinasChart(
         selectedJenis: String,
         selectedData: String
@@ -413,7 +565,7 @@ class LaporanActivity : AppCompatActivity() {
         val selectedPegawai = pegawai.text.toString()
         val selectedChartType = chartList.text.toString()
 
-        val entries = processDataForChart(selectedJenis, selectedData)
+        val entries = processDataForChart(selectedJenis, selectedData,selectedBulan,selectedTahun)
 
         // Prepare categories and data arrays
         val categories = entries.map { entry ->
@@ -483,6 +635,7 @@ class LaporanActivity : AppCompatActivity() {
         perusahaan?.let {
             fetchDataDinasPerusahaan(it.nama)
             fetchDataLemburPerusahaan(it.nama)
+            it.id?.let { it1 -> fetchDataSesiPerusahaan(it1) }
             fetchDataIzinPerusahaan(it.nama)
             fetchDataPresensiPerusahaan(it.nama)
             fetchDataPekerja(it.nama)
@@ -490,7 +643,7 @@ class LaporanActivity : AppCompatActivity() {
     }
 
     private fun fetchDataDinasPerusahaan(namaPerusahaan: String) {
-        val url = "http://192.168.1.6:8000/api/"
+        val url = "http://192.168.1.5:8000/api/"
         val retrofit = Retrofit.Builder()
             .baseUrl(url)
             .addConverterFactory(GsonConverterFactory.create())
@@ -540,7 +693,7 @@ class LaporanActivity : AppCompatActivity() {
         })
     }
     private fun fetchDataPekerja(namaPerusahaan: String) {
-        val url = "http://192.168.1.6:8000/api/"
+        val url = "http://192.168.1.5:8000/api/"
         Log.d("FetchDataError", "Nama: ${namaPerusahaan}")
         val retrofit = Retrofit.Builder()
             .baseUrl(url)
@@ -599,7 +752,7 @@ class LaporanActivity : AppCompatActivity() {
     }
 
     private fun fetchDataLemburPerusahaan(namaPerusahaan: String) {
-        val url = "http://192.168.1.6:8000/api/"
+        val url = "http://192.168.1.5:8000/api/"
         val retrofit = Retrofit.Builder()
             .baseUrl(url)
             .addConverterFactory(GsonConverterFactory.create())
@@ -648,9 +801,56 @@ class LaporanActivity : AppCompatActivity() {
             }
         })
     }
+    private fun fetchDataSesiPerusahaan(perusahaanId: Int) {
+        val url = "http://192.168.1.5:8000/api/"
+        val retrofit = Retrofit.Builder()
+            .baseUrl(url)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+        val apiService = retrofit.create(ApiService::class.java)
 
+        val call = apiService.getDataSesiPerusahaan(perusahaanId)
+        call.enqueue(object : Callback<ResponseBody> {
+            override fun onResponse(call: Call<ResponseBody>, response: Response<ResponseBody>) {
+                if (response.isSuccessful) {
+                    response.body()?.let { responseBody ->
+                        try {
+                            val jsonResponse = responseBody.string()
+                            val responseData = JSONObject(jsonResponse)
+                            val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+                            val dataArray = responseData.getJSONArray("data")
+                            sesilemburItemList.clear()
+                            for (i in 0 until dataArray.length()) {
+                                val jsonObject = dataArray.getJSONObject(i)
+                                val jamString = jsonObject.optString("jam") // Get timestamp as string
+                                val jamDate = dateFormat.parse(jamString) // Parse string to Date
+                                val sesiItem = session_lembur(
+                                    id = jsonObject.optInt("id"),
+                                    id_lembur = jsonObject.optInt("id_lembur"),
+                                    jam = jamDate ?: java.util.Date(0),
+                                    keterangan = jsonObject.optString("keterangan"),
+                                    bukti = jsonObject.optString("bukti"),
+                                    status = jsonObject.optString("status")
+                                )
+                                sesilemburItemList.add(sesiItem)
+                            }
+                            updateMonthAndYearAdapters("lembur")
+                        } catch (e: JSONException) {
+                            Log.e("FetchDataError", "Error parsing JSON: ${e.message}")
+                        }
+                    }
+                } else {
+                    Log.e("FetchDataError", "Failed to fetch data: ${response.code()}")
+                }
+            }
+
+            override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
+                Log.e("FetchDataError", "Failed to fetch data: ${t.message}")
+            }
+        })
+    }
     private fun fetchDataIzinPerusahaan(namaPerusahaan: String) {
-        val url = "http://192.168.1.6:8000/api/"
+        val url = "http://192.168.1.5:8000/api/"
         val retrofit = Retrofit.Builder()
             .baseUrl(url)
             .addConverterFactory(GsonConverterFactory.create())
@@ -700,7 +900,7 @@ class LaporanActivity : AppCompatActivity() {
     }
 
     private fun fetchDataPresensiPerusahaan(namaPerusahaan: String) {
-        val url = "http://192.168.1.6:8000/api/"
+        val url = "http://192.168.1.5:8000/api/"
         val retrofit = Retrofit.Builder()
             .baseUrl(url)
             .addConverterFactory(GsonConverterFactory.create())
@@ -796,7 +996,7 @@ class LaporanActivity : AppCompatActivity() {
                 perusahaan = it.getParcelable("perusahaan")
                 admin = it.getParcelable("user")
             }
-            val url = "http://192.168.1.6/getDecryptedLogo/${perusahaan?.id}" // Replace with your actual URL
+            val url = "http://192.168.1.5/getDecryptedLogo/${perusahaan?.id}" // Replace with your actual URL
 //            name.setText(perusahaan.nama)
             val imageRequest = ImageRequest(
                 url,

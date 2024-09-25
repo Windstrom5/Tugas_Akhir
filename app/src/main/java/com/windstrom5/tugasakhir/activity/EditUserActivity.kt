@@ -137,7 +137,7 @@ class EditUserActivity : AppCompatActivity() {
         return RequestBody.create(MediaType.parse("text/plain"), value)
     }
     private fun updateDataUser(Id: Int) {
-        val url = "http://192.168.1.6:8000/api/"
+        val url = "http://192.168.1.5:8000/api/"
         val sharedPreferencesManager = SharedPreferencesManager(this@EditUserActivity)
         val retrofit = Retrofit.Builder()
             .baseUrl(url)
@@ -418,7 +418,7 @@ class EditUserActivity : AppCompatActivity() {
                     email.setText(admin?.email)
                     if(admin?.profile != "null"){
                         val imageUrl =
-                            "http://192.168.1.6:8000/api/Admin/decryptProfile/${admin?.id}"
+                            "http://192.168.1.5:8000/api/Admin/decryptProfile/${admin?.id}"
                         val imageRequest = ImageRequest(
                             imageUrl,
                             { response ->
@@ -446,7 +446,7 @@ class EditUserActivity : AppCompatActivity() {
                     email.setText(pekerja?.email)
                     if(pekerja?.profile != "null"){
                         val imageUrl =
-                            "http://192.168.1.6:8000/api/Pekerja/decryptProfile/{${pekerja?.id}}"
+                            "http://192.168.1.5:8000/api/Pekerja/decryptProfile/{${pekerja?.id}}"
                         val imageRequest = ImageRequest(
                             imageUrl,
                             { response ->

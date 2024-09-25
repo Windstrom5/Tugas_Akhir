@@ -17,6 +17,8 @@ import android.widget.Button
 import android.widget.ImageView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
+import com.android.volley.toolbox.ImageRequest
+import com.android.volley.toolbox.Volley
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
@@ -62,19 +64,24 @@ class ShowQRCodeFragment : Fragment() {
             val secretKeyMD5 = md5(perusahaan.secret_key)
             val qrCodeBitmap = generateQRCode(secretKeyMD5, 600, 600)
 
-            // Display the final QR code without the logo
+            // Display the initial QR code without the logo
             imageViewQRCode.setImageBitmap(qrCodeBitmap)
 
-            // Add logo as a smaller watermark to the center of the QR code
-            val logo2 = perusahaan.logo
-            Log.d("Logo",logo2.toString())
-            if (logo2 == "null") {
-                // Load the logo from drawable
+            // Check if the logo is "null" and handle accordingly
+            val logoUrl = if (perusahaan.logo == "null") {
+                null // Will load from drawable
+            } else {
+                "http://192.168.1.5:8000/api/Perusahaan/decryptLogo/${perusahaan.id}"
+            }
+
+            if (logoUrl == null) {
+                // Load the default logo from drawable
                 Glide.with(this)
                     .asBitmap()
                     .load(R.drawable.logo) // Load the logo from drawable
                     .into(object : CustomTarget<Bitmap>() {
                         override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
+                            // Add the default logo as watermark
                             addLogoAsWatermark(qrCodeBitmap, resource, 100)
                         }
 
@@ -83,24 +90,29 @@ class ShowQRCodeFragment : Fragment() {
                         }
                     })
             } else {
-                Glide.with(this)
-                    .asBitmap()
-                    .load("http://192.168.1.6:8000/storage/$logo2")
-                    .into(object : CustomTarget<Bitmap>() {
-                        override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
-                            addLogoAsWatermark(qrCodeBitmap, resource, 100)
-                        }
-
-                        override fun onLoadCleared(placeholder: Drawable?) {
-                            // Handle when the image loading is cleared
-                        }
-                    })
+                // Load the logo dynamically using Volley
+                val imageRequest = ImageRequest(
+                    logoUrl,
+                    { response ->
+                        // Add the downloaded logo as watermark to the QR code
+                        addLogoAsWatermark(qrCodeBitmap, response, 100)
+                    },
+                    0, 0, ImageView.ScaleType.CENTER_CROP, Bitmap.Config.RGB_565,
+                    { error ->
+                        error.printStackTrace()
+                        Toast.makeText(requireContext(), "Failed to fetch profile image", Toast.LENGTH_SHORT).show()
+                    }
+                )
+                // Add the request to the queue
+                val requestQueue = Volley.newRequestQueue(requireContext())
+                requestQueue.add(imageRequest)
             }
 
         } catch (e: WriterException) {
             e.printStackTrace()
         }
     }
+
 
     private fun saveBitmapToGallery(bitmap: Bitmap, fileName: String) {
         val resolver = requireContext().contentResolver
