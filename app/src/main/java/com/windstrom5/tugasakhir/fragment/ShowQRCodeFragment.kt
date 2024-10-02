@@ -3,6 +3,7 @@ package com.windstrom5.tugasakhir.fragment
 import android.content.ContentValues
 import android.content.ContextWrapper
 import android.graphics.Bitmap
+import android.graphics.Color
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.media.MediaScannerConnection
@@ -51,7 +52,8 @@ class ShowQRCodeFragment : Fragment() {
         imageViewLogoWatermark = view.findViewById(R.id.imageViewLogoWatermark)
         downloadButton = view.findViewById(R.id.downloadQr)
         getBundle()
-
+        val qrCodeBitmap = perusahaan?.secret_key?.let { generateQRCode(it) }
+        imageViewQRCode.setImageBitmap(qrCodeBitmap)
         downloadButton.setOnClickListener {
             saveBitmapToGallery((imageViewQRCode.drawable as BitmapDrawable).bitmap, "QRCode")
         }
@@ -61,8 +63,8 @@ class ShowQRCodeFragment : Fragment() {
 
     private fun generateQRCodeWithLogo(perusahaan: Perusahaan) {
         try {
-            val secretKeyMD5 = md5(perusahaan.secret_key)
-            val qrCodeBitmap = generateQRCode(secretKeyMD5, 600, 600)
+//            val secretKeyMD5 = md5(perusahaan.secret_key)
+            val qrCodeBitmap = generateQRCode(perusahaan.secret_key, 600, 600)
 
             // Display the initial QR code without the logo
             imageViewQRCode.setImageBitmap(qrCodeBitmap)
@@ -138,7 +140,33 @@ class ShowQRCodeFragment : Fragment() {
             Toast.makeText(requireContext(), "Failed to save QR code", Toast.LENGTH_SHORT).show()
         }
     }
-    
+    private fun generateQRCode(data: String): Bitmap {
+        val size = 512 // size of the QR code
+        val bits = QRCodeWriter().encode(data, BarcodeFormat.QR_CODE, size, size)
+        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.RGB_565)
+        Log.d("QRCode",data)
+        for (x in 0 until size) {
+            for (y in 0 until size) {
+                bitmap.setPixel(x, y, if (bits[x, y]) Color.BLACK else Color.WHITE)
+            }
+        }
+
+        return bitmap
+    }
+    private fun downloadQrCode() {
+        val qrBitmap = (imageViewQRCode.drawable as BitmapDrawable).bitmap
+
+        val fileName = "QR_Code_${System.currentTimeMillis()}.png"
+        val filePath = MediaStore.Images.Media.insertImage(
+            requireContext().contentResolver, qrBitmap, fileName, "QR Code"
+        )
+
+        if (filePath != null) {
+            Toast.makeText(requireContext(), "QR code saved to gallery", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(requireContext(), "Failed to save QR code", Toast.LENGTH_SHORT).show()
+        }
+    }
     private fun generateQRCode(content: String, width: Int, height: Int): Bitmap {
         val hints: MutableMap<EncodeHintType, Any> = HashMap()
         hints[EncodeHintType.MARGIN] = 0
@@ -189,7 +217,7 @@ class ShowQRCodeFragment : Fragment() {
         val arguments = arguments
         if (arguments != null) {
             perusahaan = arguments.getParcelable("perusahaan")
-            perusahaan?.let { generateQRCodeWithLogo(it) }
+//            perusahaan?.let { generateQRCode(it.secret_key) }
         } else {
             Log.d("Error", "Bundle Not Found")
         }

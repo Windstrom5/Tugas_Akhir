@@ -55,6 +55,7 @@ class HistoryIzinFragment : Fragment() {
         val view = inflater.inflate(R.layout.fragment_history_izin, container, false)
         getBundle()
         swipeRefreshLayout = view.findViewById(R.id.swipeRefreshLayout)
+        expandableListView = view.findViewById(R.id.expandableListView)
         adapter = perusahaan?.let { IzinAdapter(it, requireContext(), filteredList, role ?: "") }!!
         expandableListView.setAdapter(adapter)
         if(admin != null){

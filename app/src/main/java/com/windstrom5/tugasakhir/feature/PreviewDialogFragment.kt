@@ -51,6 +51,7 @@ import com.windstrom5.tugasakhir.connection.ApiResponse
 import com.windstrom5.tugasakhir.connection.ApiService
 import com.windstrom5.tugasakhir.connection.RetrievePDFfromUrl
 import com.windstrom5.tugasakhir.connection.SharedPreferencesManager
+import com.windstrom5.tugasakhir.model.Admin
 import com.windstrom5.tugasakhir.model.Dinas
 import com.windstrom5.tugasakhir.model.DinasItem
 import com.windstrom5.tugasakhir.model.Izin
@@ -103,6 +104,7 @@ class PreviewDialogFragment: DialogFragment() {
     private var sesilembur: Int? = null
     private var islast:Boolean?= null
     private var sessionList: List<session_lembur>? = null
+    private var adminList: List<Admin>? = null
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -416,7 +418,12 @@ class PreviewDialogFragment: DialogFragment() {
             }
         }
     }
-
+    private fun sendEmailToAllAdmins(subject: String, message: String) {
+        adminList?.forEach { admin ->
+            val receiverEmail = admin.email
+            EmailSender.sendEmail(receiverEmail, subject, message)
+        }
+    }
     private fun updateSessionDetails(selectedSession: Pair<String, Pair<String, String>>) {
         val startTime = selectedSession.second.first
         val endTime = selectedSession.second.second
@@ -660,11 +667,24 @@ class PreviewDialogFragment: DialogFragment() {
                 retrievePdfTask.execute(pdfUrl)
                 view.findViewById<Button>(R.id.acceptButton).setOnClickListener {
                     updateStatus("Accept","Dinas")
+                    sendEmailToAllAdmins(
+                        "Dinas Accepted",
+                        "Your Dinas request has been accepted. Details: \n" +
+                                "Nama: ${dinas?.nama_pekerja}\n" +
+                                "Tanggal Berangkat: $tanggalBerangkatFormatted\n" +
+                                "Tanggal Pulang: $tanggalPulangFormatted\n" +
+                                "Tujuan: ${dinas?.tujuan}\n" +
+                                "Kegiatan: ${dinas?.kegiatan}"
+                    )
                     dismiss()
                 }
 
                 view.findViewById<Button>(R.id.rejectButton).setOnClickListener {
                     updateStatus("Reject","Dinas")
+                    sendEmailToAllAdmins(
+                        "Dinas Accepted",
+                        "Your Dinas request has been rejected. Please contact the HR department for further details."
+                    )
                     dismiss()
                 }
             }else{
@@ -788,11 +808,17 @@ class PreviewDialogFragment: DialogFragment() {
                 requestQueue.add(imageRequest)
                 view.findViewById<Button>(R.id.acceptButton).setOnClickListener {
                     updateStatus("Accept", "Lembur")
+                    val subject = "Lembur Accepted"
+                    val message = "Lembur for ${lembur?.nama_pekerja} on ${lembur?.tanggal} has been accepted."
+                    sendEmailToAllAdmins(subject, message)
                     dismiss()
                 }
 
                 view.findViewById<Button>(R.id.rejectButton).setOnClickListener {
                     updateStatus("Reject", "Lembur")
+                    val subject = "Lembur Rejected"
+                    val message = "Lembur for ${lembur?.nama_pekerja} on ${lembur?.tanggal} has been rejected."
+                    sendEmailToAllAdmins(subject, message)
                     dismiss()
                 }
             }else if (category == "session_pekerja") {

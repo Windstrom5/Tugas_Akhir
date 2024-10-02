@@ -377,6 +377,7 @@ class LoginActivity : AppCompatActivity() {
                             val userBundle = Bundle()
                             userBundle.putParcelable("user", admin)
                             userBundle.putParcelable("perusahaan", perusahaan)
+                            Log.d("QRCode",perusahaan.secret_key)
                             intent.putExtra("data", userBundle)
                             startActivity(intent)
                         } else {
@@ -429,6 +430,7 @@ class LoginActivity : AppCompatActivity() {
                                                     val userBundle = Bundle()
                                                     userBundle.putParcelable("user", pekerja)
                                                     userBundle.putParcelable("perusahaan", perusahaan)
+                                                    Log.d("QRCode",perusahaan.secret_key)
                                                     intent.putExtra("data", userBundle)
                                                     startActivity(intent)
                                                 } else {
@@ -461,6 +463,7 @@ class LoginActivity : AppCompatActivity() {
                                                                     "perusahaan",
                                                                     perusahaan
                                                                 )
+                                                                Log.d("QRCode",perusahaan.secret_key)
                                                                 intent.putExtra("data", userBundle)
                                                                 startActivity(intent)
                                                             } else {

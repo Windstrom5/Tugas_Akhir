@@ -212,20 +212,44 @@ class RegisterActivity : AppCompatActivity() {
                         val json = responseBody?.let { it1 -> JSONObject(it1) }
                         val perusahaanArray = json?.optJSONArray("perusahaan")
                         if (perusahaanArray != null && perusahaanArray.length() > 0) {
-                            // Handle case where perusahaan array is not empty
-                            runOnUiThread {
-                                setLoading(false)
-                                MotionToast.createToast(
-                                    this@RegisterActivity, "Error",
-                                    "Perusahaan Sudah Ada",
-                                    MotionToastStyle.ERROR,
-                                    MotionToast.GRAVITY_BOTTOM,
-                                    MotionToast.LONG_DURATION,
-                                    ResourcesCompat.getFont(
+                            var perusahaanExists = false
+
+                            for (i in 0 until perusahaanArray.length()) {
+                                val perusahaanObj = perusahaanArray.getJSONObject(i)
+                                val perusahaanNama = perusahaanObj.getString("nama").trim()
+
+                                // Compare the input nama with the perusahaan nama
+                                if (TINamaPerusahaan.editText?.text.toString().equals(perusahaanNama, ignoreCase = true)) {
+                                    perusahaanExists = true
+                                    break
+                                }
+                            }
+
+                            if (perusahaanExists) {
+                                // Handle case where perusahaan with the same name already exists
+                                runOnUiThread {
+                                    setLoading(false)
+                                    MotionToast.createToast(
                                         this@RegisterActivity,
-                                        R.font.ralewaybold
+                                        "Error",
+                                        "Perusahaan Sudah Ada",
+                                        MotionToastStyle.ERROR,
+                                        MotionToast.GRAVITY_BOTTOM,
+                                        MotionToast.LONG_DURATION,
+                                        ResourcesCompat.getFont(this@RegisterActivity, R.font.ralewaybold)
                                     )
-                                )
+                                }
+                            }else{
+                                runOnUiThread {
+                                    setLoading(false)
+                                    val intent =
+                                        Intent(this@RegisterActivity, RegisterAdminActivity::class.java)
+                                    val bundle = Bundle()
+                                    bundle.putParcelable("perusahaan", register)
+                                    Log.d("perusahaan",register.toString())
+                                    intent.putExtra("data", bundle)
+                                    startActivity(intent)
+                                }
                             }
                         } else {
                             // Handle case where perusahaan array is empty

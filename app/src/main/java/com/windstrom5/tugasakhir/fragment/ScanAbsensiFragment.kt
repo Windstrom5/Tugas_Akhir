@@ -40,6 +40,7 @@ import com.budiyev.android.codescanner.AutoFocusMode
 import com.budiyev.android.codescanner.CodeScanner
 import com.budiyev.android.codescanner.CodeScannerView
 import com.budiyev.android.codescanner.DecodeCallback
+import com.budiyev.android.codescanner.ErrorCallback
 import com.budiyev.android.codescanner.ScanMode
 import com.bumptech.glide.Glide
 import com.google.zxing.BinaryBitmap
@@ -87,6 +88,7 @@ class ScanAbsensiFragment : Fragment() {
     private lateinit var button : Button
     private lateinit var logo : ImageView
     private val LOCATION_PERMISSION_REQUEST_CODE = 123
+    private val CAMERA_REQUEST_CODE = 101
     private var perusahaan: Perusahaan? = null
     private lateinit var trackingIntent: Intent
     private var pekerja: Pekerja? = null
@@ -119,35 +121,19 @@ class ScanAbsensiFragment : Fragment() {
     private val requestPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
             if (isGranted) {
-                // Permission is granted. Start the service.
-//                startTrackingService()
+                // Permission is granted. Start scanning or show holiday animation if applicable
+                Log.d("ScanAbsensiFragment", "Permission granted")
                 if (isTodayHolidayOrSelectedDay()) {
-                    codeScanner?.stopPreview()
-                    scannerView.visibility = View.GONE
-                    lottie.repeatCount = LottieDrawable.INFINITE
-                    lottie.setAnimation(R.raw.freeday)
-                    lottie.visibility = View.VISIBLE
-                    lottie.playAnimation()
-                    Toast.makeText(requireContext(), "Today is a holiday. Scanning is disabled.", Toast.LENGTH_LONG).show()
-                }else {
-                    codeScanner?.apply {
-                        camera = CodeScanner.CAMERA_BACK
-                        formats = CodeScanner.ALL_FORMATS
-                        autoFocusMode = AutoFocusMode.SAFE
-                        scanMode = ScanMode.SINGLE
-                        isAutoFocusEnabled = true
-                        isFlashEnabled = false
-                    }
-                    codeScanner?.decodeCallback = DecodeCallback {
-                        activity?.runOnUiThread {
-                            getAllSecretKeysFromApi(it.text)
-                        }
-                    }
-                    codeScanner?.startPreview()
+                    Log.d("ScanAbsensiFragment", "Today is a holiday")
+                    showHolidayAnimation()
+                } else {
+                    Log.d("ScanAbsensiFragment", "Starting QR code scanner")
+                    startCodeScanner()
                 }
             } else {
                 // Permission is denied. Handle the denial.
-                Toast.makeText(requireContext(), "Notification permission denied", Toast.LENGTH_SHORT).show()
+                Log.d("ScanAbsensiFragment", "Permission denied")
+                Toast.makeText(requireContext(), "Camera permission denied", Toast.LENGTH_SHORT).show()
             }
         }
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -167,68 +153,100 @@ class ScanAbsensiFragment : Fragment() {
         getBundle()
         val logo2 = perusahaan?.logo
         Log.d("Logo",logo2.toString())
-        if(logo2 == "null"){
-            Glide.with(this)
-                .load(R.drawable.logo)
-                .into(logo)
-        }else{
-            val imageUrl =
-                "http://192.168.1.5:8000/storage/${perusahaan?.logo}" // Replace with your Laravel image URL
-
-            Glide.with(this)
-                .load(imageUrl)
-                .into(logo)
-        }
+//        if(logo2 == "null"){
+//            Glide.with(this)
+//                .load(R.drawable.logo)
+//                .into(logo)
+//        }else{
+//            val imageUrl =
+//                "http://192.168.1.5:8000/storage/${perusahaan?.logo}" // Replace with your Laravel image URL
+//
+//            Glide.with(this)
+//                .load(imageUrl)
+//                .into(logo)
+//        }
         if (isTodayHolidayOrSelectedDay()) {
-            codeScanner?.stopPreview()
-            scannerView.visibility = View.GONE
-            lottie.repeatCount = LottieDrawable.INFINITE
-            lottie.setAnimation(R.raw.freeday)
-            lottie.visibility = View.VISIBLE
-            lottie.playAnimation()
-            Toast.makeText(requireContext(), "Today is a holiday. Scanning is disabled.", Toast.LENGTH_LONG).show()
+            Log.d("ScanAbsensiFragment", "Today is a holiday - showing holiday animation")
+            showHolidayAnimation()
         } else {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                if (ContextCompat.checkSelfPermission(
-                        requireContext(),
-                        Manifest.permission.POST_NOTIFICATIONS
-                    ) == PackageManager.PERMISSION_GRANTED
-                ) {
-                    codeScanner?.apply {
-                        camera = CodeScanner.CAMERA_BACK
-                        formats = CodeScanner.ALL_FORMATS
-                        autoFocusMode = AutoFocusMode.SAFE
-                        scanMode = ScanMode.SINGLE
-                        isAutoFocusEnabled = true
-                        isFlashEnabled = false
-                    }
-                    codeScanner?.decodeCallback = DecodeCallback {
-                        activity?.runOnUiThread {
-                            getAllSecretKeysFromApi(it.text)
-                        }
-                    }
-                    codeScanner?.startPreview()
-                } else {
-                    // Request the permission
-                    requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            Log.d("ScanAbsensiFragment", "Not a holiday - checking camera permission")
+            checkCameraPermissionAndStartScanner()
+        }
+    }
+    private fun checkCameraPermissionAndStartScanner() {
+        // Check if the camera permission is already granted, if not request it
+        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA)
+            == PackageManager.PERMISSION_GRANTED) {
+            Log.d("ScanAbsensiFragment", "Camera permission already granted")
+            startCodeScanner()
+        } else {
+            Log.d("ScanAbsensiFragment", "Requesting camera permission")
+            ActivityCompat.requestPermissions(
+                requireActivity(),
+                arrayOf(Manifest.permission.CAMERA),
+                CAMERA_REQUEST_CODE
+            )
+        }
+    }
+
+    private fun startCodeScanner() {
+        Log.d("ScanAbsensiFragment", "Initializing QR code scanner")
+
+        codeScanner?.apply {
+            camera = CodeScanner.CAMERA_BACK
+            formats = CodeScanner.ALL_FORMATS
+            autoFocusMode = AutoFocusMode.SAFE
+            scanMode = ScanMode.SINGLE
+            isAutoFocusEnabled = true
+            isFlashEnabled = false
+
+            decodeCallback = DecodeCallback { result ->
+                activity?.runOnUiThread {
+                    Log.d("ScanAbsensiFragment", "QR code detected: ${result.text}")
+                    getAllSecretKeysFromApi(result.text)
                 }
-            } else {
-                codeScanner?.apply {
-                    camera = CodeScanner.CAMERA_BACK
-                    formats = CodeScanner.ALL_FORMATS
-                    autoFocusMode = AutoFocusMode.SAFE
-                    scanMode = ScanMode.SINGLE
-                    isAutoFocusEnabled = true
-                    isFlashEnabled = false
+            }
+
+            errorCallback = ErrorCallback { error ->
+                activity?.runOnUiThread {
+                    Log.e("ScanAbsensiFragment", "Camera error: ${error.message}")
+                    Toast.makeText(requireContext(), "Camera error: ${error.message}", Toast.LENGTH_LONG).show()
                 }
-                codeScanner?.decodeCallback = DecodeCallback {
-                    activity?.runOnUiThread {
-                        getAllSecretKeysFromApi(it.text)
-                    }
-                }
-                codeScanner?.startPreview()
             }
         }
+
+        scannerView.visibility = View.VISIBLE
+        lottie.visibility = View.GONE
+        codeScanner?.startPreview()
+        Log.d("ScanAbsensiFragment", "QR code scanner preview started")
+    }
+
+
+    private fun showHolidayAnimation() {
+        // Stop scanning and show holiday animation
+        codeScanner?.stopPreview()
+        scannerView.visibility = View.GONE
+        lottie.apply {
+            repeatCount = LottieDrawable.INFINITE
+            setAnimation(R.raw.freeday)
+            visibility = View.VISIBLE
+            playAnimation()
+        }
+        Toast.makeText(requireContext(), "Today is a holiday. Scanning is disabled.", Toast.LENGTH_LONG).show()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Resume scanning if today is not a holiday
+        if (!isTodayHolidayOrSelectedDay()) {
+            codeScanner?.startPreview()
+        }
+    }
+
+    override fun onPause() {
+        // Release resources when the fragment is paused
+        codeScanner?.releaseResources()
+        super.onPause()
     }
     private fun fetchHolidayData() {
         val currentYear = Calendar.getInstance().get(Calendar.YEAR)
@@ -262,21 +280,57 @@ class ScanAbsensiFragment : Fragment() {
     }
     private fun isTodayHolidayOrSelectedDay(): Boolean {
         val today = Calendar.getInstance()
-        val dayName = SimpleDateFormat("EEEE", Locale("id", "ID")).format(today.time)  // "EEEE" gives the full day name
+        val dayName = SimpleDateFormat("EEEE", Locale("id", "ID")).format(today.time)  // Get today's day name in full
 
+        // Check if today is a company-specific holiday (selectedDays)
+        val isHoliday = selectedDays.any { it.equals(dayName, ignoreCase = true) }
+
+        // Check if today is a national holiday
+        val isNationalHoliday = isTodayNationalHoliday()
+
+        // List of disabled weekdays based on perusahaan holiday data
+        val disabledWeekdays = mutableListOf<Int>()
+
+        // Split the perusahaan holiday data into individual days and process them
+        perusahaan?.holiday?.split(",\\s*".toRegex())?.forEach { day ->
+            when (day.trim().lowercase()) {
+                "senin" -> disabledWeekdays.add(Calendar.MONDAY)
+                "selasa" -> disabledWeekdays.add(Calendar.TUESDAY)
+                "rabu" -> disabledWeekdays.add(Calendar.WEDNESDAY)
+                "kamis" -> disabledWeekdays.add(Calendar.THURSDAY)
+                "jumat" -> disabledWeekdays.add(Calendar.FRIDAY)
+                "sabtu" -> disabledWeekdays.add(Calendar.SATURDAY)
+                "minggu" -> disabledWeekdays.add(Calendar.SUNDAY)
+                "nasional" -> {
+                    // If "Nasional" is mentioned, mark it as a national holiday
+                    if (isNationalHoliday) {
+                        textView.text = "Today is a national holiday. Enjoy your day off!"
+                    }
+                }
+            }
+        }
+
+        // Check if today matches any of the disabled weekdays (company holidays)
+        val isCompanyHoliday = disabledWeekdays.contains(today.get(Calendar.DAY_OF_WEEK))
+
+        // Logging the checks for debugging
         Log.d("Holiday", "Today is $dayName")
         Log.d("Holiday", "Selected days: $selectedDays")
+        Log.d("HolidayCheck", "Is today a selected company holiday? $isHoliday")
+        Log.d("HolidayCheck", "Is today a national holiday? $isNationalHoliday")
+        Log.d("HolidayCheck", "Is today a company weekday holiday? $isCompanyHoliday")
 
-        val isHoliday = selectedDays.any { it.equals(dayName, ignoreCase = true) }
-        val isNationalHoliday = isTodayNationalHoliday()
-        if(isHoliday){
+        // Display a message if today is a company holiday or a national holiday
+        if (isHoliday) {
+            textView.text = "Today is a company holiday: $dayName. Enjoy your day off!"
+        } else if (isCompanyHoliday) {
             textView.text = "Today is a company holiday: $dayName. Enjoy your day off!"
         }
-        Log.d("HolidayCheck", "Is today a selected holiday? $isHoliday")
-        Log.d("HolidayCheck", "Is today a national holiday? $isNationalHoliday")
 
-        return isHoliday || isNationalHoliday
+        // Return true if today is either a company holiday or a national holiday
+        return isHoliday || isNationalHoliday || isCompanyHoliday
     }
+
     private fun isTodayNationalHoliday(): Boolean {
         val today = Calendar.getInstance()
 
@@ -355,7 +409,7 @@ class ScanAbsensiFragment : Fragment() {
     }
 
     private fun getAllSecretKeysFromApi(qrCode: String) {
-        val apiUrl = "http://192.168.1.5:8000/api/getAllSecretKeys"
+            val apiUrl = "http://192.168.1.5:8000/api/getAllSecretKeys"
         val jsonObjectRequest = JsonObjectRequest(
             Request.Method.GET, apiUrl, null,
             { response ->
@@ -392,17 +446,23 @@ class ScanAbsensiFragment : Fragment() {
     }
 
     private fun compareSecretKeys(apiSecretKeys: List<SecretKeyInfo>, qrCode: String): Boolean {
-        for ((namaPerusahaan, secretKey, jamMasuk, jamKeluar) in apiSecretKeys) {
-            val hashedSecretKey = md5(secretKey)
-            if (hashedSecretKey == qrCode && namaPerusahaan == perusahaan?.nama) {
+        for (secretKeyInfo in apiSecretKeys) {
+            // Destructure secretKeyInfo to extract fields
+            val (namaPerusahaan, secretKey, jamMasuk, jamKeluar) = secretKeyInfo
+            Log.d("QRCode", "QR Code: $qrCode, SecretKeys: $secretKey")
+
+            // Compare the QR code with the secret key and company name
+            if (secretKey == qrCode && namaPerusahaan == perusahaan?.nama) {
                 Toast.makeText(requireContext(), "Valid QR Code for $namaPerusahaan", Toast.LENGTH_SHORT).show()
                 return true
             }
         }
 
         // Invalid QR Code
+        Toast.makeText(requireContext(), "Invalid QR Code", Toast.LENGTH_SHORT).show()
         return false
     }
+
     private fun startTrackingService() {
         trackingIntent.putExtra("perusahaan", perusahaan)
         trackingIntent.putExtra("pekerja", pekerja)

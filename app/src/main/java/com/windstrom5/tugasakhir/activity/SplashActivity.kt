@@ -58,7 +58,9 @@ class SplashActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Log.d("WHATS","WHATS")
         setContentView(R.layout.activity_splash)
+        Log.d("WHATS","WHATS")
         logoImageView = findViewById(R.id.logoImageView)
         Log.d("VolleyError","test")
         Glide.with(this)
