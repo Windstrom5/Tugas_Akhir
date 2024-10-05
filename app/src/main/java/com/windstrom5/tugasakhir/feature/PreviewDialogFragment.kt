@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.res.Resources
 import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.drawable.Drawable
 import android.net.Uri
@@ -494,23 +495,27 @@ class PreviewDialogFragment: DialogFragment() {
     }
 
     private fun setupButtonsForExistingSession(matchingSession: session_lembur) {
-        val acceptButton = view?.findViewById<Button>(R.id.acceptButton)
-        val rejectButton = view?.findViewById<Button>(R.id.rejectButton)
+        val acceptButton = view?.findViewById<CircularProgressButton>(R.id.acceptButton)
+        val rejectButton = view?.findViewById<CircularProgressButton>(R.id.rejectButton)
         if(category == "session_admin"){
             acceptButton?.setOnClickListener {
+                acceptButton.startAnimation()
                 updateDataSesi()
             }
 
             rejectButton?.setOnClickListener {
+                rejectButton.startAnimation()
                 // Handle cancel or rejection of session
                 dismiss()
             }
         }else{
             acceptButton?.setOnClickListener {
+                acceptButton.startAnimation()
                 updateDataSesi()
             }
 
             rejectButton?.setOnClickListener {
+                rejectButton.startAnimation()
                 // Handle cancel or rejection of session
                 dismiss()
             }
@@ -563,6 +568,9 @@ class PreviewDialogFragment: DialogFragment() {
         call.enqueue(object : Callback<ApiResponse> {
             override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
                 if (response.isSuccessful) {
+                    val vectorDrawable = ContextCompat.getDrawable(requireContext(), R.drawable.done_bitmap)
+                    val bitmap = vectorDrawable?.let { vectorToBitmap(it) }
+                    view?.findViewById<CircularProgressButton>(R.id.acceptButton)?.doneLoadingAnimation(Color.parseColor("#AAFF00"), bitmap)
                     val apiResponse = response.body()
                     Log.d("ApiResponse", "Status: ${apiResponse?.status}, Message: ${apiResponse?.message}")
                     MotionToast.createToast(requireActivity(), "Add Lembur Success",
@@ -582,7 +590,7 @@ class PreviewDialogFragment: DialogFragment() {
                 Log.e("ApiResponse", "Request failed: ${t.message}")
             }
         })
-        setLoading(false)
+//        setLoading(false)
     }
     private fun saveDataSesi(){
         val url = "http://192.168.1.5:8000/api/"
@@ -609,6 +617,9 @@ class PreviewDialogFragment: DialogFragment() {
         call.enqueue(object : Callback<ApiResponse> {
             override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
                 if (response.isSuccessful) {
+                    val vectorDrawable = ContextCompat.getDrawable(requireContext(), R.drawable.done_bitmap)
+                    val bitmap = vectorDrawable?.let { vectorToBitmap(it) }
+                    view?.findViewById<CircularProgressButton>(R.id.acceptButton)?.doneLoadingAnimation(Color.parseColor("#AAFF00"), bitmap)
                     val apiResponse = response.body()
                     Log.d("ApiResponse", "Status: ${apiResponse?.status}, Message: ${apiResponse?.message}")
                     MotionToast.createToast(requireActivity(), "Add Lembur Success",
@@ -628,7 +639,7 @@ class PreviewDialogFragment: DialogFragment() {
                 Log.e("ApiResponse", "Request failed: ${t.message}")
             }
         })
-        setLoading(false)
+//        setLoading(false)
     }
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -660,12 +671,13 @@ class PreviewDialogFragment: DialogFragment() {
                 kegiatanInputLayout.isEnabled = false
                 kegiatanInputLayout.editText?.setText(dinas?.kegiatan)
 
-                val pdfUrl = "http://192.168.1.5:8000/storage/${dinas?.bukti}"
+                val pdfUrl = "http://192.168.1.5:8000/api/Dinas/decryptBukti/${dinas?.id}"
                 val pdfView = view.findViewById<PDFView>(R.id.pdfView)
                 pdfView.visibility = View.VISIBLE
                 val retrievePdfTask = RetrievePDFfromUrl(pdfView)
                 retrievePdfTask.execute(pdfUrl)
-                view.findViewById<Button>(R.id.acceptButton).setOnClickListener {
+                view.findViewById<CircularProgressButton>(R.id.acceptButton).setOnClickListener {
+                    view.findViewById<CircularProgressButton>(R.id.acceptButton).startAnimation()
                     updateStatus("Accept","Dinas")
                     sendEmailToAllAdmins(
                         "Dinas Accepted",
@@ -679,7 +691,8 @@ class PreviewDialogFragment: DialogFragment() {
                     dismiss()
                 }
 
-                view.findViewById<Button>(R.id.rejectButton).setOnClickListener {
+                view.findViewById<CircularProgressButton>(R.id.rejectButton).setOnClickListener {
+                    view.findViewById<CircularProgressButton>(R.id.acceptButton).startAnimation()
                     updateStatus("Reject","Dinas")
                     sendEmailToAllAdmins(
                         "Dinas Accepted",
@@ -703,7 +716,7 @@ class PreviewDialogFragment: DialogFragment() {
                 berangkatInputLayout.endIconMode = TextInputLayout.END_ICON_CUSTOM
                 berangkatInputLayout.endIconDrawable = endIconDrawable
                 pulangInputLayout.endIconMode = TextInputLayout.END_ICON_CUSTOM
-                val delete = view.findViewById<CircularProgressButton>(R.id.deleteButton)
+                val delete = view.findViewById<CircularProgressButton>(R.id.rejectButton)
                 delete.setOnClickListener{
                     PopupDialog.getInstance(requireContext())
                         .standardDialogBuilder()
@@ -754,14 +767,14 @@ class PreviewDialogFragment: DialogFragment() {
                 kegiatanInputLayout.editText?.isFocusable = true
                 kegiatanInputLayout.editText?.isFocusableInTouchMode = true
                 kegiatanInputLayout.editText?.setText(dinas?.kegiatan)
-                val pdfUrl = "http://192.168.1.5:8000/storage/${dinas?.bukti}"
+                val pdfUrl = "http://192.168.1.5:8000/api/Dinas/decryptBukti/${dinas?.id}"
                 val pdfView = view.findViewById<PDFView>(R.id.pdfView)
                 pdfView.visibility = View.VISIBLE
                 val retrievePdfTask = RetrievePDFfromUrl(pdfView)
                 retrievePdfTask.execute(pdfUrl)
-                val acceptButton = view.findViewById<Button>(R.id.acceptButton)
+                val acceptButton = view.findViewById<CircularProgressButton>(R.id.acceptButton)
                 acceptButton.setText("Save")
-                val cancelButton = view.findViewById<Button>(R.id.rejectButton)
+                val cancelButton = view.findViewById<CircularProgressButton>(R.id.rejectButton)
                 cancelButton.setText("Cancel")
                 val fileName = pdfUrl.substringAfterLast("/")
                 view.findViewById<TextView>(R.id.text).visibility = View.VISIBLE
@@ -774,7 +787,8 @@ class PreviewDialogFragment: DialogFragment() {
                     dismiss()
                 }
                 acceptButton.setOnClickListener{
-                    setLoading(true)
+                    view.findViewById<CircularProgressButton>(R.id.acceptButton).startAnimation()
+//                    setLoading(true)
                     dinas!!.id?.let { it1 -> updateDataDinas(it1, berangkatInputLayout,pulangInputLayout,tujuanInput,kegiatanInputLayout) }
                     dismiss()
                 }
@@ -806,7 +820,8 @@ class PreviewDialogFragment: DialogFragment() {
                 )
                 val requestQueue = Volley.newRequestQueue(requireContext())
                 requestQueue.add(imageRequest)
-                view.findViewById<Button>(R.id.acceptButton).setOnClickListener {
+                view.findViewById<CircularProgressButton>(R.id.acceptButton).setOnClickListener {
+                    view.findViewById<CircularProgressButton>(R.id.acceptButton).startAnimation()
                     updateStatus("Accept", "Lembur")
                     val subject = "Lembur Accepted"
                     val message = "Lembur for ${lembur?.nama_pekerja} on ${lembur?.tanggal} has been accepted."
@@ -814,7 +829,8 @@ class PreviewDialogFragment: DialogFragment() {
                     dismiss()
                 }
 
-                view.findViewById<Button>(R.id.rejectButton).setOnClickListener {
+                view.findViewById<CircularProgressButton>(R.id.rejectButton).setOnClickListener {
+                    view.findViewById<CircularProgressButton>(R.id.acceptButton).startAnimation()
                     updateStatus("Reject", "Lembur")
                     val subject = "Lembur Rejected"
                     val message = "Lembur for ${lembur?.nama_pekerja} on ${lembur?.tanggal} has been rejected."
@@ -933,14 +949,16 @@ class PreviewDialogFragment: DialogFragment() {
                         }
                         updateSessionAdminDetails(selectedSession)
                     }
-                    view.findViewById<Button>(R.id.acceptButton).setOnClickListener {
+                    view.findViewById<CircularProgressButton>(R.id.acceptButton).setOnClickListener {
+                        view.findViewById<CircularProgressButton>(R.id.acceptButton).startAnimation()
                         updateStatus("Accept", "Sesi")
                         if(islast == true){
                             updateStatus("Finished", "Lembur")
                         }
                     }
 
-                    view.findViewById<Button>(R.id.rejectButton).setOnClickListener {
+                    view.findViewById<CircularProgressButton>(R.id.rejectButton).setOnClickListener {
+                        view.findViewById<CircularProgressButton>(R.id.acceptButton).startAnimation()
                         updateStatus("Reject", "Sesi")
                         if(islast == true){
                             updateStatus("Finished", "Lembur")
@@ -998,9 +1016,9 @@ class PreviewDialogFragment: DialogFragment() {
                 )
                 val requestQueue = Volley.newRequestQueue(requireContext())
                 requestQueue.add(imageRequest)
-                val acceptButton = view.findViewById<Button>(R.id.acceptButton)
+                val acceptButton = view.findViewById<CircularProgressButton>(R.id.acceptButton)
                 acceptButton.setText("Save")
-                val cancelButton = view.findViewById<Button>(R.id.rejectButton)
+                val cancelButton = view.findViewById<CircularProgressButton>(R.id.rejectButton)
                 cancelButton.setText("Cancel")
                 val fileName = url.substringAfterLast("/")
                 view.findViewById<TextView>(R.id.text).visibility = View.VISIBLE
@@ -1013,7 +1031,8 @@ class PreviewDialogFragment: DialogFragment() {
                     dismiss()
                 }
                 acceptButton.setOnClickListener{
-                    setLoading(true)
+                    view.findViewById<CircularProgressButton>(R.id.acceptButton).startAnimation()
+//                    setLoading(true)
                     lembur!!.id?.let { it1 -> updateDataLembur(it1, tanggal,TiMasuk,TiPulang,kegiatanInputLayout) }
                 }
             }
@@ -1038,11 +1057,13 @@ class PreviewDialogFragment: DialogFragment() {
                         .load(attachmentUrl)
                         .into(imageView)
                 }
-                view.findViewById<Button>(R.id.acceptButton).setOnClickListener {
+                view.findViewById<CircularProgressButton>(R.id.acceptButton).setOnClickListener {
+                    view.findViewById<CircularProgressButton>(R.id.acceptButton).startAnimation()
                     updateStatus("Accept","Izin")
                 }
 
-                view.findViewById<Button>(R.id.rejectButton).setOnClickListener {
+                view.findViewById<CircularProgressButton>(R.id.rejectButton).setOnClickListener {
+                    view.findViewById<CircularProgressButton>(R.id.acceptButton).startAnimation()
                     updateStatus("Reject","Izin")
                 }
             }else{
@@ -1097,9 +1118,9 @@ class PreviewDialogFragment: DialogFragment() {
                         .into(imageView)
                 }
                 val fileName = attachmentUrl.substringAfterLast("/")
-                val acceptButton = view.findViewById<Button>(R.id.acceptButton)
+                val acceptButton = view.findViewById<CircularProgressButton>(R.id.acceptButton)
                 acceptButton.setText("Save")
-                val cancelButton = view.findViewById<Button>(R.id.rejectButton)
+                val cancelButton = view.findViewById<CircularProgressButton>(R.id.rejectButton)
                 cancelButton.setText("Cancel")
                 view.findViewById<TextView>(R.id.text).visibility = View.VISIBLE
                 view.findViewById<LinearLayout>(R.id.layout).visibility = View.VISIBLE
@@ -1111,7 +1132,8 @@ class PreviewDialogFragment: DialogFragment() {
                     dismiss()
                 }
                 acceptButton.setOnClickListener{
-                    setLoading(true)
+                    view.findViewById<CircularProgressButton>(R.id.acceptButton).startAnimation()
+//                    setLoading(true)
                     izin!!.id?.let { it1 -> updateDataIzin(it1, tanggal,acIzin,kegiatan) }
                 }
             }
@@ -1336,7 +1358,13 @@ class PreviewDialogFragment: DialogFragment() {
 
         return holidaysMap
     }
-    private fun updateDataDinas(dinasId: Int,TIBerangkat : TextInputLayout,TIPulang : TextInputLayout,acTujuan:AutoCompleteTextView,TIkegiatan:TextInputLayout) {
+    private fun updateDataDinas(
+        dinasId: Int,
+        TIBerangkat: TextInputLayout,
+        TIPulang: TextInputLayout,
+        acTujuan: AutoCompleteTextView,
+        TIkegiatan: TextInputLayout
+    ) {
         val url = "http://192.168.1.5:8000/api/"
 
         val retrofit = Retrofit.Builder()
@@ -1345,21 +1373,34 @@ class PreviewDialogFragment: DialogFragment() {
             .build()
 
         val apiService = retrofit.create(ApiService::class.java)
+
+        // Log input values
         val berangkat = createPartFromString(TIBerangkat.editText?.text.toString())
         val pulang = createPartFromString(TIPulang.editText?.text.toString())
         val tujuan = createPartFromString(acTujuan.text.toString())
         val kegiatan = createPartFromString(TIkegiatan.editText?.text.toString())
+
+        Log.d("UpdateDinas", "berangkat: ${berangkat}, pulang: ${pulang}, tujuan: ${tujuan}, kegiatan: ${kegiatan}")
+
+        // Log file upload status
         val buktiFile = selectedFile
         val buktiPart = if (buktiFile != null) {
             val requestFile = RequestBody.create(MediaType.parse("pdf/*"), buktiFile)
             MultipartBody.Part.createFormData("bukti", buktiFile.name, requestFile)
         } else {
+            Log.d("UpdateDinas", "No file selected")
             null
         }
-        val call = apiService.updateDinas(dinasId, berangkat,pulang,tujuan,kegiatan, buktiPart)
+
+        // Log Retrofit call details
+        Log.d("UpdateDinas", "Calling updateDinas API with dinasId: $dinasId")
+        val call = apiService.updateDinas(dinasId, berangkat, pulang, tujuan, kegiatan, buktiPart)
         call.enqueue(object : Callback<ApiResponse> {
             override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
                 if (response.isSuccessful) {
+                    val vectorDrawable = ContextCompat.getDrawable(requireContext(), R.drawable.done_bitmap)
+                    val bitmap = vectorDrawable?.let { vectorToBitmap(it) }
+                    view?.findViewById<CircularProgressButton>(R.id.acceptButton)?.doneLoadingAnimation(Color.parseColor("#AAFF00"), bitmap)
                     val apiResponse = response.body()
                     Log.d("ApiResponse", "Status: ${apiResponse?.status}, Message: ${apiResponse?.message}")
                     activity?.let { motionToastActivity ->
@@ -1374,7 +1415,8 @@ class PreviewDialogFragment: DialogFragment() {
                         )
                     }
                 } else {
-                    Log.e("ApiResponse", "Error: ${response.message()}")
+                    // Log the error details from the response
+                    Log.e("ApiResponse", "Error: ${response.message()} | Code: ${response.code()} | Body: ${response.errorBody()?.string()}")
                 }
             }
 
@@ -1382,9 +1424,11 @@ class PreviewDialogFragment: DialogFragment() {
                 Log.e("ApiResponse", "Request failed: ${t.message}")
             }
         })
-        setLoading(false)
+
+//        setLoading(false)
         dismiss()
     }
+
     private fun updateDataLembur(lemburId: Int,TiTanggal : TextInputLayout,TIMasuk : TextInputLayout,TiKeluar:TextInputLayout,TIkegiatan:TextInputLayout) {
         val url = "http://192.168.1.5:8000/api/"
 
@@ -1432,7 +1476,7 @@ class PreviewDialogFragment: DialogFragment() {
                 Log.e("ApiResponse", "Request failed: ${t.message}")
             }
         })
-        setLoading(false)
+//        setLoading(false)
         dismiss()
     }
     private fun updateDataIzin(izinId: Int,TITanggal:TextInputLayout,acIzin:AutoCompleteTextView,TIAlasan:TextInputLayout) {
@@ -1480,7 +1524,7 @@ class PreviewDialogFragment: DialogFragment() {
                 Log.e("ApiResponse", "Request failed: ${t.message}")
             }
         })
-        setLoading(false)
+//        setLoading(false)
         dismiss()
     }
     private fun createPartFromString(value: String): RequestBody {
@@ -1609,7 +1653,7 @@ class PreviewDialogFragment: DialogFragment() {
             }else if (lembur  != null) {
 
             }else{
-                view?.findViewById<Button>(R.id.acceptButton)?.isEnabled = isAllFieldsIzinFilled()
+                view?.findViewById<CircularProgressButton>(R.id.acceptButton)?.isEnabled = isAllFieldsIzinFilled()
             }
         }
     }
@@ -1674,6 +1718,9 @@ class PreviewDialogFragment: DialogFragment() {
         call.enqueue(object : Callback<ApiResponse> {
             override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
                 if (response.isSuccessful) {
+                    val vectorDrawable = ContextCompat.getDrawable(requireContext(), R.drawable.done_bitmap)
+                    val bitmap = vectorDrawable?.let { vectorToBitmap(it) }
+                    view?.findViewById<CircularProgressButton>(R.id.acceptButton)?.doneLoadingAnimation(Color.parseColor("#AAFF00"), bitmap)
                     if (category == "Izin") {
                         MotionToast.createToast(
                             requireActivity(),
@@ -1711,16 +1758,24 @@ class PreviewDialogFragment: DialogFragment() {
                     val errorMessage = response.errorBody()?.string() ?: "Unknown error"
                     Log.e("UpdateStatusError", "Failed to update status: $errorMessage")
                     Log.e("UpdateStatusError", "Id: $id")
-
+                    view?.findViewById<CircularProgressButton>(R.id.acceptButton)?.revertAnimation()
                     dismiss() // Dismiss the dialog even if the status update fails
                 }
             }
 
             override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
-                // Handle network failures
+                view?.findViewById<CircularProgressButton>(R.id.acceptButton)?.revertAnimation()
                 Log.e("UpdateStatusError", "Failed to update status: ${t.message}")
                 dismiss()
             }
         })
+    }
+    private fun vectorToBitmap(vectorDrawable: Drawable): Bitmap {
+        val bitmap = Bitmap.createBitmap(vectorDrawable.intrinsicWidth,
+            vectorDrawable.intrinsicHeight, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        vectorDrawable.setBounds(0, 0, canvas.width, canvas.height)
+        vectorDrawable.draw(canvas)
+        return bitmap
     }
 }

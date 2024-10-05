@@ -256,7 +256,6 @@ class AddIzinFragment : Fragment() {
         dpd.show(childFragmentManager, "DatePickerDialog")
     }
 
-
     private fun fetchHolidayData() {
         val currentYear = Calendar.getInstance().get(Calendar.YEAR)
         val url = "https://dayoffapi.vercel.app/api?year=$currentYear"

@@ -278,7 +278,7 @@
                     android:layout_marginTop="16dp"
                     android:orientation="horizontal">
 
-                    <Button
+                    <br.com.simplepass.loading_button_lib.customViews.CircularProgressButton
                         android:id="@+id/acceptButton"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -288,7 +288,7 @@
                         android:textColor="@color/blackTextColor"
                         android:textStyle="bold" />
 
-                    <Button
+                    <br.com.simplepass.loading_button_lib.customViews.CircularProgressButton
                         android:id="@+id/rejectButton"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
