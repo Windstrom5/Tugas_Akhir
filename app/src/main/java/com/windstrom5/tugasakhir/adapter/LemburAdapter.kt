@@ -171,6 +171,7 @@ class LemburAdapter(
             Role != "Admin" && lembur.status == "On Going" -> {
                 val formatter = DateTimeFormatter.ofPattern("HH:mm:ss", Locale.getDefault())
                 val waktuMasuk = LocalTime.parse(lembur.waktu_masuk.toString(), formatter)
+                val waktuPulang = LocalTime.parse(lembur.waktu_pulang.toString(), formatter)
                 val now = LocalTime.now()
                 if (now.isBefore(waktuMasuk)) {
                     val diffInSeconds = java.time.Duration.between(now, waktuMasuk).seconds
@@ -180,8 +181,14 @@ class LemburAdapter(
                         override fun onTick(millisUntilFinished: Long) {
                             val diffMinutes = TimeUnit.MILLISECONDS.toMinutes(millisUntilFinished)
                             val diffHours = TimeUnit.MILLISECONDS.toHours(millisUntilFinished)
-                            val diffSeconds = TimeUnit.MILLISECONDS.toSeconds(millisUntilFinished) % 60
-                            val cooldownText = String.format("%02d:%02d:%02d \nRemaining", diffHours, diffMinutes % 60, diffSeconds)
+                            val diffSeconds =
+                                TimeUnit.MILLISECONDS.toSeconds(millisUntilFinished) % 60
+                            val cooldownText = String.format(
+                                "%02d:%02d:%02d \nRemaining",
+                                diffHours,
+                                diffMinutes % 60,
+                                diffSeconds
+                            )
 
                             actionButton.visibility = View.VISIBLE
                             actionButton.text = cooldownText
@@ -195,6 +202,9 @@ class LemburAdapter(
                             actionButton.isEnabled = true
                         }
                     }.start()
+                }else if(now.isAfter(waktuPulang)){
+                    actionButton.isEnabled = false
+                    actionButton.text = "Waiting \nVerification"
                 } else {
                     // Current time is on or after jam_masuk
                     actionButton.visibility = View.VISIBLE
@@ -212,8 +222,15 @@ class LemburAdapter(
         actionButton.setOnClickListener {
             when (actionButton.text) {
                 "Download \nReceipt" -> {
-                    val htmlContent = getHtmlTemplate(lembur)
-                    generatePdfFromHtml(htmlContent)
+                    lembur.id?.let { lemburId ->
+                        fetchSessionLemburData(lemburId, onSuccess = { sessionLemburList ->
+                            val htmlContent = getHtmlTemplate(lembur, sessionLemburList)
+                            generatePdfFromHtml(htmlContent)
+                        }, onError = { error ->
+                            Log.e("SessionFetchError", error.message ?: "Unknown error")
+                        })
+                    }
+
                 }
                 "Upload \nProgress" ->{
                     Log.d("ApiResponse","Clicked")
@@ -242,9 +259,9 @@ class LemburAdapter(
                         })
                     }
                 }
-                "Confirm \nRequest" ->{
-
-                }
+//                "Confirm \nRequest" ->{
+//
+//                }
                 "Respond \nLembur" -> {
                     Log.d("Lembur", "clicked")
                     val fragmentManager = (context as AppCompatActivity).supportFragmentManager
@@ -339,81 +356,103 @@ class LemburAdapter(
 
 
 
-    private fun getHtmlTemplate(lembur: LemburItem): String {
+    private fun getHtmlTemplate(lembur: LemburItem, sesiLemburList: List<session_lembur>): String {
         val dateFormatter = SimpleDateFormat("dd MMMM yyyy", Locale("id", "ID"))
         val timeFormatter = SimpleDateFormat("HH:mm", Locale("id", "ID")) // Use "HH:mm" for 24-hour format
         val tanggal = dateFormatter.format(lembur.tanggal)
         val jammasuk = timeFormatter.format(lembur.waktu_masuk)
         val jamkeluar = timeFormatter.format(lembur.waktu_pulang)
+
+        // HTML template with placeholders for session lembur
         val template = """
-            <!DOCTYPE html>
-                <html lang="en">
-                <head>
-                    <meta charset="UTF-8">
-                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    <title>Work Overtime Receipt for Employee</title>
-                    <style>
-                        body {
-                            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                            margin: 20px;
-                            text-align: center;
-                        }
-                        header {
-                            background-color: #4CAF50;
-                            padding: 10px;
-                            color: #fff;
-                        }
-                        h1 {
-                            margin-bottom: 0;
-                        }
-                        .logo {
-                            max-width: 100px;
-                            margin: 10px auto;
-                        }
-                        .receipt-details {
-                            margin-top: 20px;
-                            text-align: left;
-                        }
-                        .receipt-details p {
-                            margin: 5px 0;
-                        }
-                        footer {
-                            margin-top: 50px;
-                            padding-top: 10px;
-                            border-top: 1px solid #ccc;
-                            color: #555;
-                        }
-                    </style>
-                </head>
-                <body>
-                    <header>
-                        <h1>Receipt for Pekerja</h1>
-                    </header>
-                    <img src="http://192.168.1.5:8000/storage/${perusahaan.logo}" alt="Perusahaan Logo" class="logo">
-                    <div class="receipt-details">\
-                        <p><strong>Date Printed:</strong> ${
-                        dateFormatter.format(
-                            Date()
-                        )
-                    }</p>
+        <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Work Overtime Receipt for Employee</title>
+                <style>
+                    body {
+                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                        margin: 20px;
+                        text-align: center;
+                    }
+                    header {
+                        background-color: #4CAF50;
+                        padding: 10px;
+                        color: #fff;
+                    }
+                    h1 {
+                        margin-bottom: 0;
+                    }
+                    .logo {
+                        max-width: 100px;
+                        margin: 10px auto;
+                    }
+                    .receipt-details {
+                        margin-top: 20px;
+                        text-align: left;
+                    }
+                    .receipt-details p {
+                        margin: 5px 0;
+                    }
+                    .session-details {
+                        margin-top: 30px;
+                    }
+                    .session-details h2 {
+                        margin-bottom: 5px;
+                    }
+                    .session-item {
+                        margin: 10px 0;
+                    }
+                    footer {
+                        margin-top: 50px;
+                        padding-top: 10px;
+                        border-top: 1px solid #ccc;
+                        color: #555;
+                    }
+                </style>
+            </head>
+            <body>
+                <header>
+                    <h1>Receipt for Pekerja</h1>
+                </header>
+                <img src="http://192.168.1.5:8000/storage/${perusahaan.logo}" alt="Perusahaan Logo" class="logo">
+                <div class="receipt-details">
+                    <p><strong>Date Printed:</strong> ${dateFormatter.format(Date())}</p>
                     <p><strong>Company Name:</strong> ${perusahaan.nama}</p>
                     <p><strong>Worker Name:</strong> ${lembur.nama_pekerja}</p>
                     <p><strong>Date Worked:</strong> ${tanggal}</p>
                     <p><strong>Check-in Time:</strong> ${jammasuk}</p>
                     <p><strong>Check-out Time:</strong> ${jamkeluar}</p>
                     <p><strong>Work Description:</strong> ${lembur.pekerjaan}</p>
-                    </div>
-                    <footer>
-                        <p>Powered by Workhubs</p>
-                    </footer>
-                </body>
-                </html>
+                </div>
 
-        """.trimIndent()
+                <!-- Session Lembur Section -->
+                <div class="session-details">
+                    <h2>Overtime Sessions</h2>
+                    ${sesiLemburList.joinToString("") { session ->
+            val sessionTime = timeFormatter.format(session.jam)
+            """
+                        <div class="session-item">
+                            <p><strong>Session Time:</strong> $sessionTime</p>
+                            <p><strong>Description:</strong> ${session.keterangan}</p>
+                            <p><strong>Status:</strong> ${session.status}</p>
+                        </div>
+                        """.trimIndent()
+        }}
+                </div>
 
-        // Replace placeholders with actual data
+                <footer>
+                    <p>Powered by Workhubs</p>
+                </footer>
+            </body>
+        </html>
+    """.trimIndent()
+
         return template
     }
+
     private fun generatePdfFromHtml(htmlContent: String) {
         try {
             val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)

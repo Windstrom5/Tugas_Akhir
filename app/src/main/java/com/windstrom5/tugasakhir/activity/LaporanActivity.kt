@@ -85,7 +85,7 @@ class LaporanActivity : AppCompatActivity() {
     private lateinit var pegawai: AutoCompleteTextView
     private lateinit var chartList: AutoCompleteTextView
     private var holidaysMap: MutableMap<Calendar, String> = mutableMapOf()
-    private lateinit var generate:CircularProgressButton
+    private lateinit var generate: CircularProgressButton
     private lateinit var chart: AAChartView
     private var bundle: Bundle? = null
     private var admin: Admin? = null
@@ -99,8 +99,8 @@ class LaporanActivity : AppCompatActivity() {
     private lateinit var suggestionsCardView: CardView
     private lateinit var suggestionsText: TextView
     private lateinit var expand: TextView
-    private lateinit var expandableLayout:LinearLayout
-    private lateinit var btnToggleExpand:TextView
+    private lateinit var expandableLayout: LinearLayout
+    private lateinit var btnToggleExpand: TextView
     private var isExpanded = false
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -145,21 +145,31 @@ class LaporanActivity : AppCompatActivity() {
             }
         }
         generate.setOnClickListener {
-            val selectedJenis = jenis.text.toString()   
+            val selectedJenis = jenis.text.toString()
             val selectedDataShort = data.text.toString()
             val selectedData = getFullDescription(selectedJenis, selectedDataShort)
             val selectedBulan = bulan.text.toString()  // Retrieve selected month, if any
             val selectedTahun = tahun.text.toString()
             if (selectedJenis.isEmpty() || selectedData.isEmpty() || selectedBulan.isEmpty() || selectedTahun.isEmpty()) {
-                showErrorDialog(selectedJenis.isEmpty(), selectedData.isEmpty(),selectedBulan.isEmpty(),selectedTahun.isEmpty())
+                showErrorDialog(
+                    selectedJenis.isEmpty(),
+                    selectedData.isEmpty(),
+                    selectedBulan.isEmpty(),
+                    selectedTahun.isEmpty()
+                )
             } else {
                 generate.startAnimation()
-                generateChart(selectedJenis, selectedData,selectedBulan,selectedTahun)
+                generateChart(selectedJenis, selectedData, selectedBulan, selectedTahun)
             }
         }
 
     }
-    private fun processDinasData(selectedData: String, selectedBulan: String, selectedTahun: String): List<Entry> {
+
+    private fun processDinasData(
+        selectedData: String,
+        selectedBulan: String,
+        selectedTahun: String
+    ): List<Entry> {
         val monthMapping = mapOf(
             "January" to 1, "February" to 2, "March" to 3, "April" to 4,
             "May" to 5, "June" to 6, "July" to 7, "August" to 8,
@@ -188,32 +198,45 @@ class LaporanActivity : AppCompatActivity() {
                     }
                 totalEntries
             }
+
             "rata-rata durasi dinas" -> {
                 val avgEntries = filteredDinasItems.groupBy { it.id_pekerja }
                     .map { (id, dinasItems) ->
                         val totalDurasi = dinasItems.sumOf { dinas ->
                             // Calculate duration in hours as Double
-                            val durasi = (dinas.tanggal_pulang.time - dinas.tanggal_berangkat.time) / (1000 * 60 * 60).toDouble()
+                            val durasi =
+                                (dinas.tanggal_pulang.time - dinas.tanggal_berangkat.time) / (1000 * 60 * 60).toDouble()
                             durasi
                         }
-                        val avgDurasi = if (dinasItems.isNotEmpty()) totalDurasi / dinasItems.size else 0.0
+                        val avgDurasi =
+                            if (dinasItems.isNotEmpty()) totalDurasi / dinasItems.size else 0.0
                         // Return Entry with Float values
                         Entry(id?.toFloat() ?: 0f, avgDurasi.toFloat())
                     }
                 avgEntries
             }
+
             "distribusi dinas" -> {
                 val distribusiEntries = filteredDinasItems.groupBy { it.tujuan }
                     .map { (tujuan, dinasItems) ->
                         val totalPerTujuan = dinasItems.size.toFloat()
-                        Entry(tujuan.hashCode().toFloat(), totalPerTujuan)  // Using tujuan's hashcode for unique representation
+                        Entry(
+                            tujuan.hashCode().toFloat(),
+                            totalPerTujuan
+                        )  // Using tujuan's hashcode for unique representation
                     }
                 distribusiEntries
             }
+
             else -> emptyList()
         }
     }
-    private fun processIzinData(selectedData: String, selectedBulan: String, selectedTahun: String): List<Entry> {
+
+    private fun processIzinData(
+        selectedData: String,
+        selectedBulan: String,
+        selectedTahun: String
+    ): List<Entry> {
         val monthMapping = mapOf(
             "January" to 1, "February" to 2, "March" to 3, "April" to 4,
             "May" to 5, "June" to 6, "July" to 7, "August" to 8,
@@ -242,6 +265,7 @@ class LaporanActivity : AppCompatActivity() {
                     }
                 totalEntries
             }
+
             "rata-rata izin" -> {
                 val avgEntries = filteredIzinItems.groupBy { it.id_pekerja }
                     .map { (id, izinItems) ->
@@ -251,17 +275,35 @@ class LaporanActivity : AppCompatActivity() {
                     }
                 avgEntries
             }
-            "distribusi izin" -> {
+
+            "jenis izin" -> {
+                // Log the filtered izin items
+                Log.d("izin", filteredIzinItems.toString())
+
+                // Group by kategori and create the entries
                 val distribusiEntries = filteredIzinItems.groupBy { it.kategori }
                     .map { (kategori, izinItems) ->
+                        // Count how many times each 'kategori' was picked
                         val totalPerKategori = izinItems.size.toFloat()
-                        Entry(kategori.hashCode().toFloat(), totalPerKategori)  // Use kategori's hashcode as unique identifier
+
+                        // Use the kategori for the X-axis and total count for the Y-axis
+                        Entry(
+                            kategori.hashCode().toFloat(),
+                            totalPerKategori
+                        )  // Keeping hashCode for entry but you can store kategori as a label
                     }
+
+                // Log the distribusi entries for debugging
+                Log.d("Izin Test", distribusiEntries.toString())
+
+                // Return the generated entries
                 distribusiEntries
             }
+
             else -> emptyList()
         }
     }
+
     private fun fetchHolidayData() {
         val currentYear = Calendar.getInstance().get(Calendar.YEAR)
         val url = "https://dayoffapi.vercel.app/api?year=$currentYear"
@@ -290,11 +332,17 @@ class LaporanActivity : AppCompatActivity() {
             }
         )
 
-        Volley.newRequestQueue(this
+        Volley.newRequestQueue(
+            this
         ).add(jsonArrayRequest)
     }
 
-    private fun processPresensiData(selectedData: String, selectedBulan: String, selectedTahun: String, selectedPegawai: String?): List<Entry> {
+    private fun processPresensiData(
+        selectedData: String,
+        selectedBulan: String,
+        selectedTahun: String,
+        selectedPegawai: String?
+    ): List<Entry> {
         // Map month names to numbers
         val monthMapping = mapOf(
             "January" to 1, "February" to 2, "March" to 3, "April" to 4,
@@ -350,13 +398,17 @@ class LaporanActivity : AppCompatActivity() {
             val presentCount = items.count { presensi -> presensi.keluar != null }
             val absentCount = totalDaysInMonth - presentCount
 
-            Log.d("AttendanceLogger", "Employee ID: $id, Total Present: $presentCount, Total Absent: $absentCount")
+            Log.d(
+                "AttendanceLogger",
+                "Employee ID: $id, Total Present: $presentCount, Total Absent: $absentCount"
+            )
 
             // Return Entry with present count or discipline score based on selected data
             when (selectedData) {
                 "tingkat kehadiran" -> {
                     resultEntries.add(Entry(id?.toFloat() ?: 0f, presentCount.toFloat()))
                 }
+
                 "kedisiplinan karyawan" -> {
                     val disciplineScore = if (totalDaysInMonth > 0) {
                         (presentCount.toFloat() / totalDaysInMonth) * 100 // Discipline score as a percentage
@@ -373,7 +425,8 @@ class LaporanActivity : AppCompatActivity() {
 
     // Helper function to get total valid days in the selected month excluding holidays and specified weekdays
     private fun getTotalValidDaysInMonth(selectedMonth: Int?, selectedYear: Int?): Int {
-        val totalDaysInMonth = 31 // Change this if necessary; it will be adjusted based on actual month days
+        val totalDaysInMonth =
+            31 // Change this if necessary; it will be adjusted based on actual month days
         val validDays = (1..totalDaysInMonth).count { day ->
             val calendar = Calendar.getInstance().apply {
                 set(Calendar.YEAR, selectedYear ?: 0)
@@ -408,16 +461,40 @@ class LaporanActivity : AppCompatActivity() {
     }
 
 
-    private fun processDataForChart(selectedJenis: String, selectedData: String,selectedBulan: String,selectedTahun: String,selectedPegawai: String): List<Entry> {
+    private fun processDataForChart(
+        selectedJenis: String,
+        selectedData: String,
+        selectedBulan: String,
+        selectedTahun: String,
+        selectedPegawai: String
+    ): List<Entry> {
         return when (selectedJenis) {
-            "lembur" -> processLemburData(selectedData,selectedBulan,selectedTahun,selectedPegawai)
-            "dinas"-> processDinasData(selectedData,selectedBulan,selectedTahun)
-            "izin"-> processIzinData(selectedData,selectedBulan,selectedTahun)
-            "presensi"-> processPresensiData(selectedData,selectedBulan,selectedTahun,selectedPegawai)
+            "lembur" -> processLemburData(
+                selectedData,
+                selectedBulan,
+                selectedTahun,
+                selectedPegawai
+            )
+
+            "dinas" -> processDinasData(selectedData, selectedBulan, selectedTahun)
+            "izin" -> processIzinData(selectedData, selectedBulan, selectedTahun)
+            "presensi" -> processPresensiData(
+                selectedData,
+                selectedBulan,
+                selectedTahun,
+                selectedPegawai
+            )
+
             else -> emptyList()
         }
     }
-    private fun buildErrorMessage(isJenisEmpty: Boolean, isDataEmpty: Boolean, isBulanEmpty: Boolean, isTahunEmpty: Boolean): String {
+
+    private fun buildErrorMessage(
+        isJenisEmpty: Boolean,
+        isDataEmpty: Boolean,
+        isBulanEmpty: Boolean,
+        isTahunEmpty: Boolean
+    ): String {
         val missingFields = mutableListOf<String>()
 
         if (isJenisEmpty) {
@@ -439,7 +516,13 @@ class LaporanActivity : AppCompatActivity() {
             ""
         }
     }
-    private fun showErrorDialog(isJenisEmpty: Boolean, isDataEmpty: Boolean, isBulanEmpty: Boolean, isTahunEmpty: Boolean) {
+
+    private fun showErrorDialog(
+        isJenisEmpty: Boolean,
+        isDataEmpty: Boolean,
+        isBulanEmpty: Boolean,
+        isTahunEmpty: Boolean
+    ) {
         val errorMessage = buildErrorMessage(isJenisEmpty, isDataEmpty, isBulanEmpty, isTahunEmpty)
 
         if (errorMessage.isNotEmpty()) {
@@ -455,7 +538,12 @@ class LaporanActivity : AppCompatActivity() {
         }
     }
 
-    private fun processLemburData(selectedData: String, selectedBulan: String, selectedTahun: String,selectedPegawai: String?): List<Entry> {
+    private fun processLemburData(
+        selectedData: String,
+        selectedBulan: String,
+        selectedTahun: String,
+        selectedPegawai: String?
+    ): List<Entry> {
         val monthMapping = mapOf(
             "January" to 1, "February" to 2, "March" to 3, "April" to 4,
             "May" to 5, "June" to 6, "July" to 7, "August" to 8,
@@ -495,7 +583,8 @@ class LaporanActivity : AppCompatActivity() {
                     .map { (id, lemburItems) ->
                         // Calculate total duration explicitly
                         val totalDuration = lemburItems.sumOf { lembur ->
-                            val filteredSessions = acceptedSessions.filter { it.id_lembur == lembur.id }
+                            val filteredSessions =
+                                acceptedSessions.filter { it.id_lembur == lembur.id }
 
                             val sessionDurations = filteredSessions.map { sesi ->
                                 val waktuMasuk = lembur.waktu_masuk
@@ -505,17 +594,27 @@ class LaporanActivity : AppCompatActivity() {
                                 val (sessions, _) = calculateSessions(waktuMasuk, waktuPulang)
 
                                 val validSessions = sessions.filter { (_, sessionTimes) ->
-                                    val sesiJam = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(sesi.jam)
+                                    val sesiJam =
+                                        SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(
+                                            sesi.jam
+                                        )
                                     sesiJam >= sessionTimes.first && sesiJam <= sessionTimes.second
                                 }
 
                                 // Calculate total time for each valid session
                                 val totalSessionTime = validSessions.sumOf { (_, sessionTimes) ->
-                                    val sessionStart = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).parse(sessionTimes.first)
-                                    val sessionEnd = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).parse(sessionTimes.second)
+                                    val sessionStart =
+                                        SimpleDateFormat("HH:mm:ss", Locale.getDefault()).parse(
+                                            sessionTimes.first
+                                        )
+                                    val sessionEnd =
+                                        SimpleDateFormat("HH:mm:ss", Locale.getDefault()).parse(
+                                            sessionTimes.second
+                                        )
 
                                     val durationMillis = sessionEnd.time - sessionStart.time
-                                    val durationHours = durationMillis.toDouble() / (1000 * 60) // Convert to hours
+                                    val durationHours =
+                                        durationMillis.toDouble() / (1000 * 60) // Convert to hours
                                     durationHours
                                 }
 
@@ -532,11 +631,13 @@ class LaporanActivity : AppCompatActivity() {
                     }
                 totalEntries
             }
+
             "rata-rata lembur" -> {
                 val avgEntries = filteredLemburItems.groupBy { it.id_pekerja }
                     .map { (id, lemburItems) ->
                         val totalDuration = lemburItems.sumOf { lembur ->
-                            val filteredSessions = acceptedSessions.filter { it.id_lembur == lembur.id }
+                            val filteredSessions =
+                                acceptedSessions.filter { it.id_lembur == lembur.id }
 
                             val sessionDurations = filteredSessions.map { sesi ->
                                 val waktuMasuk = lembur.waktu_masuk
@@ -546,7 +647,10 @@ class LaporanActivity : AppCompatActivity() {
                                 val (sessions, _) = calculateSessions(waktuMasuk, waktuPulang)
 
                                 val validSessions = sessions.filter { (_, sessionTimes) ->
-                                    val sesiJam = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(sesi.jam)
+                                    val sesiJam =
+                                        SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(
+                                            sesi.jam
+                                        )
                                     sesiJam >= sessionTimes.first && sesiJam <= sessionTimes.second
                                 }
 
@@ -557,16 +661,19 @@ class LaporanActivity : AppCompatActivity() {
                         }
 
                         // Calculate the average duration
-                        val avgDuration = if (lemburItems.isNotEmpty()) totalDuration / lemburItems.size else 0.0
+                        val avgDuration =
+                            if (lemburItems.isNotEmpty()) totalDuration / lemburItems.size else 0.0
                         Entry(id?.toFloat() ?: 0f, avgDuration.toFloat())
                     }
                 avgEntries
             }
+
             "distribusi lembur" -> {
                 val distribusiEntries = filteredLemburItems.groupBy { it.id_pekerja }
                     .map { (id, lemburItems) ->
                         val totalDuration = lemburItems.sumOf { lembur ->
-                            val filteredSessions = acceptedSessions.filter { it.id_lembur == lembur.id }
+                            val filteredSessions =
+                                acceptedSessions.filter { it.id_lembur == lembur.id }
 
                             val sessionDurations = filteredSessions.map { sesi ->
                                 val waktuMasuk = lembur.waktu_masuk
@@ -576,7 +683,10 @@ class LaporanActivity : AppCompatActivity() {
                                 val (sessions, _) = calculateSessions(waktuMasuk, waktuPulang)
 
                                 val validSessions = sessions.filter { (_, sessionTimes) ->
-                                    val sesiJam = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(sesi.jam)
+                                    val sesiJam =
+                                        SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(
+                                            sesi.jam
+                                        )
                                     sesiJam >= sessionTimes.first && sesiJam <= sessionTimes.second
                                 }
 
@@ -591,6 +701,7 @@ class LaporanActivity : AppCompatActivity() {
                     }
                 distribusiEntries
             }
+
             else -> {
                 emptyList()
             }
@@ -603,7 +714,10 @@ class LaporanActivity : AppCompatActivity() {
         return String.format("%d:%02d", hours, minutes) // Format as "hours:minutes"
     }
 
-    private fun calculateSessions(waktuMasuk: Time, waktuPulang: Time): Pair<List<Pair<String, Pair<String, String>>>, Int> {
+    private fun calculateSessions(
+        waktuMasuk: Time,
+        waktuPulang: Time
+    ): Pair<List<Pair<String, Pair<String, String>>>, Int> {
         val sessions = mutableListOf<Pair<String, Pair<String, String>>>()
         val currentTime = Time(System.currentTimeMillis())
         val currentTimeMinutes = (currentTime.hours * 60) + currentTime.minutes
@@ -649,7 +763,8 @@ class LaporanActivity : AppCompatActivity() {
             sessions.add("Sesi ${sessionCount + 1}" to (lastSessionStartString to lastSessionEndString))
 
             if (currentTimeMinutes > lastSessionStart.hours * 60 + lastSessionStart.minutes &&
-                currentTimeMinutes <= lastSessionEnd.hours * 60 + lastSessionEnd.minutes) {
+                currentTimeMinutes <= lastSessionEnd.hours * 60 + lastSessionEnd.minutes
+            ) {
                 closestSessionIndex = sessionCount // Last partial session
             }
         } else {
@@ -691,7 +806,10 @@ class LaporanActivity : AppCompatActivity() {
             val sessionTimeFormatted = timeFormatter.format(sessionTime)
             val sessionOnlyTime = timeFormatter.parse(sessionTimeFormatted)
 
-            Log.d("getLemburDuration", "Session Time: $sessionOnlyTime, Start Time: $startTime, End Time: $endTime")
+            Log.d(
+                "getLemburDuration",
+                "Session Time: $sessionOnlyTime, Start Time: $startTime, End Time: $endTime"
+            )
 
             // Check if the session time (time only) is within the start and end time range
             return if (sessionOnlyTime.after(startTime) && sessionOnlyTime.before(endTime)) {
@@ -717,7 +835,7 @@ class LaporanActivity : AppCompatActivity() {
         selectedData: String,
         selectedBulan: String,
         selectedTahun: String,
-        selectedPegawai: String // Add selectedPegawai as a parameter
+        selectedPegawai: String
     ): String {
         // Use the selected month and year in suggestions
         val monthYearText = "untuk bulan $selectedBulan tahun $selectedTahun"
@@ -746,7 +864,8 @@ class LaporanActivity : AppCompatActivity() {
                 val averageMinutes = averageLemburInMinutes % 60
 
                 val excessiveLemburThresholdInMinutes = 40 * 60 // 40 hours in minutes
-                val employeesWithExcessiveLembur = entries.filter { it.y > excessiveLemburThresholdInMinutes }
+                val employeesWithExcessiveLembur =
+                    entries.filter { it.y > excessiveLemburThresholdInMinutes }
 
                 val excessiveMessage = if (employeesWithExcessiveLembur.isNotEmpty()) {
                     "Perhatian: ${employeesWithExcessiveLembur.size} $employeeText bekerja lembur lebih dari 40 jam$monthYearText. Pertimbangkan untuk mengevaluasi beban kerja atau menambah staf."
@@ -760,6 +879,7 @@ class LaporanActivity : AppCompatActivity() {
 
                 "Total lembur keseluruhan $totalLemburFormatted$specificEmployeeMessage $monthYearText.\n$excessiveMessage"
             }
+
             "rata-rata lembur" -> {
                 val averageLembur = entries.map { it.y }.average()
                 val belowOptimalThreshold = 5 // Example threshold for under-utilization
@@ -771,11 +891,17 @@ class LaporanActivity : AppCompatActivity() {
                     "Penggunaan lembur sudah merata di antara $employeeText$specificEmployeeMessage$monthYearText."
                 }
 
-                "Rata-rata lembur keseluruhan$specificEmployeeMessage $monthYearText adalah ${"%.2f".format(averageLembur)} jam.\n$underUtilizationMessage"
+                "Rata-rata lembur keseluruhan$specificEmployeeMessage $monthYearText adalah ${
+                    "%.2f".format(
+                        averageLembur
+                    )
+                } jam.\n$underUtilizationMessage"
             }
+
             "distribusi lembur" -> {
                 "Distribusi lembur$monthYearText menunjukkan pola lembur $employeeText$specificEmployeeMessage pada berbagai waktu. Analisis ini dapat membantu untuk merencanakan lembur di masa depan dengan lebih efisien."
             }
+
             "total dinas" -> {
                 val totalDinas = entries.map { it.y }.sum()
                 val averageDinas = entries.map { it.y }.average()
@@ -789,8 +915,13 @@ class LaporanActivity : AppCompatActivity() {
                     "Jumlah dinas masih dalam batas normal$monthYearText."
                 }
 
-                "Total dinas keseluruhan$specificEmployeeMessage $monthYearText adalah $totalDinas kali.\nRata-rata dinas per karyawan adalah ${"%.2f".format(averageDinas)} kali.\n$excessiveDinasMessage"
+                "Total dinas keseluruhan$specificEmployeeMessage $monthYearText adalah $totalDinas kali.\nRata-rata dinas per karyawan adalah ${
+                    "%.2f".format(
+                        averageDinas
+                    )
+                } kali.\n$excessiveDinasMessage"
             }
+
             "rata-rata durasi dinas" -> {
                 val averageDuration = entries.map { it.y }.average()
                 val shortTripThreshold = 48 // Example threshold for short trips (hours)
@@ -803,11 +934,17 @@ class LaporanActivity : AppCompatActivity() {
                     "Durasi dinas per $employeeText cukup merata$specificEmployeeMessage $monthYearText."
                 }
 
-                "Rata-rata durasi dinas$specificEmployeeMessage $monthYearText adalah ${"%.2f".format(averageDuration)} jam.\n$shortTripsMessage"
+                "Rata-rata durasi dinas$specificEmployeeMessage $monthYearText adalah ${
+                    "%.2f".format(
+                        averageDuration
+                    )
+                } jam.\n$shortTripsMessage"
             }
+
             "distribusi dinas" -> {
                 "Distribusi dinas$monthYearText menunjukkan pola waktu perjalanan dinas $employeeText$specificEmployeeMessage. Analisis ini bisa berguna untuk merencanakan dinas yang lebih efisien ke depannya."
             }
+
             "total izin" -> {
                 val totalIzin = entries.map { it.y }.sum()
                 val averageIzin = entries.map { it.y }.average()
@@ -821,24 +958,52 @@ class LaporanActivity : AppCompatActivity() {
                     "Tidak ada $employeeText yang melebihi izin $excessiveIzinThreshold kali$monthYearText. Penggunaan izin masih dalam batas normal."
                 }
 
-                "Total izin keseluruhan$specificEmployeeMessage $monthYearText adalah $totalIzin izin.\nRata-rata izin per karyawan adalah ${"%.2f".format(averageIzin)} izin.\n$excessiveMessage"
+                "Total izin keseluruhan$specificEmployeeMessage $monthYearText adalah $totalIzin izin.\nRata-rata izin per karyawan adalah ${
+                    "%.2f".format(
+                        averageIzin
+                    )
+                } izin.\n$excessiveMessage"
             }
-            "rata-rata durasi izin" -> {
-                val averageIzin = entries.map { it.y }.average()
-                val lowIzinThreshold = 1 // Example threshold for low izin usage
-                val employeesWithLowIzin = entries.filter { it.y < lowIzinThreshold }
+//            "Rata-rata Izin" -> {
+//                val averageIzin = entries.map { it.y }.average()
+//                val lowIzinThreshold = 1 // Example threshold for low izin usage
+//                val employeesWithLowIzin = entries.filter { it.y < lowIzinThreshold }
+//
+//                val underUsageMessage = if (employeesWithLowIzin.isNotEmpty()) {
+//                    "Beberapa $employeeText memiliki izin di bawah rata-rata $lowIzinThreshold kali$monthYearText, pertimbangkan apakah ada perubahan kebijakan yang diperlukan."
+//                } else {
+//                    "Penggunaan izin sudah merata di antara $employeeText$specificEmployeeMessage $monthYearText."
+//                }
+//
+//                "Rata-rata izin keseluruhan$specificEmployeeMessage $monthYearText adalah ${"%.2f".format(averageIzin)} izin.\n$underUsageMessage"
+//            }
+            "jenis izin" -> {
+                // Using entries returned from processDataForChart directly
+                val distribusiEntries = entries
 
-                val underUsageMessage = if (employeesWithLowIzin.isNotEmpty()) {
-                    "Beberapa $employeeText memiliki izin di bawah rata-rata $lowIzinThreshold kali$monthYearText, pertimbangkan apakah ada perubahan kebijakan yang diperlukan."
+                // Find the category with the highest count
+                val mostFrequentJenis = distribusiEntries.maxByOrNull { it.y }
+                // Calculate total izin entries
+                val totalIzinCount = distribusiEntries.sumOf { it.y.toInt() }
+
+                // Create categories using the distribusiEntries
+                val categories = distribusiEntries.map { entry ->
+                    // Use the entry's original value (not hash code) to get the corresponding kategori
+                    izinItemList.first { it.kategori.hashCode().toFloat() == entry.x }.kategori
+                }.toTypedArray()
+
+                if (mostFrequentJenis != null && totalIzinCount > 0) {
+                    // Get the index based on the mostFrequentJenis
+                    val jenisIzin =
+                        categories[distribusiEntries.indexOf(mostFrequentJenis)] // Get the corresponding kategori using the index
+                    val percentage = (mostFrequentJenis.y / totalIzinCount) * 100
+
+                    "Jenis izin $monthYearText menunjukkan bahwa izin kategori ${jenisIzin} paling sering digunakan, dengan ${percentage.toInt()}% dari total izin. Analisis ini dapat membantu mengevaluasi kebijakan izin untuk kategori yang paling sering dipilih."
                 } else {
-                    "Penggunaan izin sudah merata di antara $employeeText$specificEmployeeMessage $monthYearText."
+                    "Jenis izin $monthYearText tidak menunjukkan izin yang dominan. Tidak ada kategori izin yang sering dipilih."
                 }
+            }
 
-                "Rata-rata izin keseluruhan$specificEmployeeMessage $monthYearText adalah ${"%.2f".format(averageIzin)} izin.\n$underUsageMessage"
-            }
-            "distribusi izin" -> {
-                "Distribusi izin$monthYearText menunjukkan pola izin berdasarkan kategori seperti sakit, cuti, dan lainnya. Analisis ini dapat membantu untuk mengevaluasi kebijakan izin dan kategori yang paling sering digunakan."
-            }
             "tingkat kehadiran" -> {
                 val monthMapping = mapOf(
                     "January" to 1, "February" to 2, "March" to 3, "April" to 4,
@@ -868,16 +1033,21 @@ class LaporanActivity : AppCompatActivity() {
                         attendanceRate < 50.0 -> {
                             "Tingkat kehadiran keseluruhan sangat rendah, hanya $presentCount hari hadir dari $totalDaysInMonth hari (absen $absentCount hari). Pertimbangkan untuk menyelidiki penyebabnya."
                         }
+
                         attendanceRate < 75.0 -> {
                             "Tingkat kehadiran keseluruhan $presentCount hari hadir dari $totalDaysInMonth hari (absen $absentCount hari). Meskipun masih dalam batas, pertimbangkan untuk meningkatkan kehadiran."
                         }
+
                         else -> {
                             "Tingkat kehadiran keseluruhan sangat baik dengan $presentCount hari hadir dari $totalDaysInMonth hari (absen $absentCount hari)."
                         }
                     }
 
                     // Log the attendance details
-                    Log.d("AttendanceLogger", "Employee ID: $id, Total Present: $presentCount, Total Absent: $absentCount")
+                    Log.d(
+                        "AttendanceLogger",
+                        "Employee ID: $id, Total Present: $presentCount, Total Absent: $absentCount"
+                    )
                     suggestions.append("Karyawan: $employeeName - $attendanceMessage\n")
 
                 }
@@ -890,7 +1060,8 @@ class LaporanActivity : AppCompatActivity() {
                 val averageAbsences = entries.map { it.y }.average()
 
                 val excessiveAbsenceThreshold = 5 // Example threshold for excessive absences
-                val employeesWithExcessiveAbsences = entries.filter { it.y > excessiveAbsenceThreshold }
+                val employeesWithExcessiveAbsences =
+                    entries.filter { it.y > excessiveAbsenceThreshold }
 
                 val absenceMessage = if (employeesWithExcessiveAbsences.isNotEmpty()) {
                     "Perhatian: ${employeesWithExcessiveAbsences.size} karyawan memiliki ketidakhadiran lebih dari $excessiveAbsenceThreshold kali. Pertimbangkan untuk mendiskusikan kebijakan kehadiran."
@@ -898,7 +1069,11 @@ class LaporanActivity : AppCompatActivity() {
                     "Jumlah ketidakhadiran keseluruhan masih dalam batas normal."
                 }
 
-                "Total ketidakhadiran keseluruhan $totalAbsences kali.\nRata-rata ketidakhadiran per karyawan adalah ${"%.2f".format(averageAbsences)} kali.\n$absenceMessage"
+                "Total ketidakhadiran keseluruhan $totalAbsences kali.\nRata-rata ketidakhadiran per karyawan adalah ${
+                    "%.2f".format(
+                        averageAbsences
+                    )
+                } kali.\n$absenceMessage"
             }
 
             else -> {
@@ -908,7 +1083,11 @@ class LaporanActivity : AppCompatActivity() {
     }
 
 
-    private fun getLemburDurationFromSessions(idLembur: Int, waktuMasuk: Date, waktuPulang: Date): Int {
+    private fun getLemburDurationFromSessions(
+        idLembur: Int,
+        waktuMasuk: Date,
+        waktuPulang: Date
+    ): Int {
         // Filter sesi_lembur items based on id_lembur and status "Accepted"
         val relevantSessions = sesilemburItemList.filter {
             it.id_lembur == idLembur && it.status == "Accepted"
@@ -941,8 +1120,9 @@ class LaporanActivity : AppCompatActivity() {
         val durationInMillis = waktu_pulang.time - waktu_masuk.time
         return (durationInMillis / (1000 * 60 * 60)).toInt() // Return duration in hours
     }
+
     private fun getEmployeeNameById(employeeId: Int?): String {
-        return pekerjaList.find { it.id == employeeId }?.nama?: "Unknown"
+        return pekerjaList.find { it.id == employeeId }?.nama ?: "Unknown"
     }
 //    private fun processDinasData(selectedData: String): List<Entry> {
 //        val entries = mutableListOf<Entry>()
@@ -980,13 +1160,26 @@ class LaporanActivity : AppCompatActivity() {
         selectedBulan: String,
         selectedTahun: String
     ) {
-        val selectedPegawai = pegawai.text.toString()  // Retrieve selected employee or check if empty
+        val selectedPegawai =
+            pegawai.text.toString()  // Retrieve selected employee or check if empty
         val selectedChartType = chartList.text.toString()  // Retrieve selected chart type
 
-        val entries = processDataForChart(selectedJenis, selectedData, selectedBulan, selectedTahun, selectedPegawai)
+        val entries = processDataForChart(
+            selectedJenis,
+            selectedData,
+            selectedBulan,
+            selectedTahun,
+            selectedPegawai
+        )
         Log.d("EntriesData", "Entries: $entries")
 
-        val suggestions = generateSuggestions(entries, selectedData, selectedBulan, selectedTahun, selectedPegawai)
+        val suggestions = generateSuggestions(
+            entries,
+            selectedData,
+            selectedBulan,
+            selectedTahun,
+            selectedPegawai
+        )
         suggestionsCardView = findViewById(R.id.suggestionsCardView)
         suggestionsText = findViewById(R.id.suggestionsText)
         suggestionsText.text = suggestions
@@ -1014,15 +1207,34 @@ class LaporanActivity : AppCompatActivity() {
 
         // Map the original y-values (decimal) to the chart data
         val data = entries.map { it.y.toFloat() }.toTypedArray()
-        val categories = entries.map { entry ->
-            val employeeId = entry.x.toInt()
-            val employeeName = getEmployeeNameById(employeeId)  // Convert employee ID (x) to name
-            Log.d("EmployeeNameLookup", "Looking up name for employee ID: $employeeId, Result: $employeeName")
-            employeeName
-        }.toTypedArray()
-
+        val categories: Array<String>
+        if (selectedData == "jenis izin") {
+            val distribusiEntries =
+                entries  // Using entries returned from processDataForChart directly
+            categories = distribusiEntries.map { entry ->
+                // Using entry.x hashCode to find the corresponding kategori
+                izinItemList.first { it.kategori.hashCode().toFloat() == entry.x }.kategori
+            }.toTypedArray()
+        } else {
+            categories = entries.map { entry ->
+                val employeeId = entry.x.toInt()
+                val employeeName =
+                    getEmployeeNameById(employeeId)  // Convert employee ID (x) to name
+                Log.d(
+                    "EmployeeNameLookup",
+                    "Looking up name for employee ID: $employeeId, Result: $employeeName"
+                )
+                employeeName  // Return employee name
+            }.toTypedArray()
+        }
         // Construct the chart title dynamically based on selected options
-        val chartTitle = buildChartTitle(selectedJenis, selectedData, selectedBulan, selectedTahun, selectedPegawai)
+        val chartTitle = buildChartTitle(
+            selectedJenis,
+            selectedData,
+            selectedBulan,
+            selectedTahun,
+            selectedPegawai
+        )
         Log.d("ChartGeneration", "Chart title: $chartTitle")
 
         // Create and configure the AAChartModel with the processed data
@@ -1030,11 +1242,13 @@ class LaporanActivity : AppCompatActivity() {
             .chartType(chartType)
             .title(chartTitle)  // Use the dynamic title
             .categories(categories)  // Use employee names as categories on the x-axis
-            .series(arrayOf(
-                AASeriesElement()
-                    .name(selectedData)
-                    .data(data as Array<Any>)  // Set y-values as chart data
-            ))
+            .series(
+                arrayOf(
+                    AASeriesElement()
+                        .name(selectedData)
+                        .data(data as Array<Any>)  // Set y-values as chart data
+                )
+            )
 
         Log.d("ChartGeneration", "Chart model generated with data")
 
@@ -1054,13 +1268,16 @@ class LaporanActivity : AppCompatActivity() {
         val hours = totalMinutes / 60  // Get the hours part
         val minutes = totalMinutes % 60  // Get the remaining minutes
 
-        Log.d("TimeConversion", "Decimal hours: $decimalHours, Total minutes: $totalMinutes, Hours: $hours, Minutes: $minutes")
+        Log.d(
+            "TimeConversion",
+            "Decimal hours: $decimalHours, Total minutes: $totalMinutes, Hours: $hours, Minutes: $minutes"
+        )
 
         // Return the formatted HH:mm string
         return String.format("%d:%02d", hours, minutes)
     }
 
-    
+
     private fun getYAxisTitle(selectedJenis: String, selectedData: String): String {
         return when (selectedJenis) {
             "lembur" -> when (selectedData) {
@@ -1120,16 +1337,19 @@ class LaporanActivity : AppCompatActivity() {
     }
 
     private fun getEmployeeNameById(employeeId: Int): String {
-        Log.d("List Pekerja",pekerjaList.toString())
+        Log.d("List Pekerja", pekerjaList.toString())
         return pekerjaList.find { it.id == employeeId }?.nama ?: "Unknown"
     }
+
     private fun setupAutoCompleteTextViews() {
         val jenisOptions = arrayOf("lembur", "dinas", "izin", "presensi", "all")
         val chartOptions = arrayOf("Bar", "Line", "Pie", "Scatter", "Polygon")
 
 
-        val jenisAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, jenisOptions)
-        val chartAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, chartOptions)
+        val jenisAdapter =
+            ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, jenisOptions)
+        val chartAdapter =
+            ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, chartOptions)
 
         jenis.setAdapter(jenisAdapter)
 
@@ -1141,7 +1361,8 @@ class LaporanActivity : AppCompatActivity() {
             chartList.setText("")
             val selectedJenis = parent.getItemAtPosition(position).toString()
             val dataOptions = getDataOptions(selectedJenis)
-            val dataAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, dataOptions)
+            val dataAdapter =
+                ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, dataOptions)
             data.setAdapter(dataAdapter)
             // Update month and year adapters dynamically based on selectedJenis
             updatePegawaiAdapter(selectedJenis)
@@ -1161,7 +1382,8 @@ class LaporanActivity : AppCompatActivity() {
         }.distinctBy { it.first }
 
         val pegawaiNames = pegawaiNamesWithIds.map { it.second }
-        val pegawaiAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, pegawaiNames)
+        val pegawaiAdapter =
+            ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, pegawaiNames)
         pegawai.setAdapter(pegawaiAdapter)
 
         // Store the mapping of names to IDs for later use
@@ -1172,21 +1394,22 @@ class LaporanActivity : AppCompatActivity() {
             // You can use selectedId when you need the ID for database queries
         }
     }
+
     private val lemburOptionsMap = mapOf(
         "Total" to "total lembur",
         "Rata-rata" to "rata-rata lembur",
-        "Distribusi" to "distribusi lembur"
+//        "Distribusi" to "distribusi lembur"
     )
 
     private val dinasOptionsMap = mapOf(
         "Total" to "total dinas",
         "Rata-rata" to "rata-rata durasi dinas",
-        "Distribusi" to "distribusi dinas"
+//        "Distribusi" to "distribusi dinas"
     )
 
     private val izinOptionsMap = mapOf(
         "Total" to "total izin",
-        "Rata-rata" to "rata-rata izin",
+//        "Rata-rata" to "rata-rata izin",
         "Jenis" to "jenis izin"
     )
 
@@ -1207,10 +1430,11 @@ class LaporanActivity : AppCompatActivity() {
             "dinas" -> dinasOptionsMap.keys.toTypedArray()
             "izin" -> izinOptionsMap.keys.toTypedArray()
             "presensi" -> presensiOptionsMap.keys.toTypedArray()
-            "all" -> allOptionsMap.keys.toTypedArray()
+//            "all" -> allOptionsMap.keys.toTypedArray()
             else -> arrayOf()
         }
     }
+
     private fun getFullDescription(selectedJenis: String, selectedDataShort: String): String {
         return when (selectedJenis) {
             "lembur" -> lemburOptionsMap[selectedDataShort] ?: ""
@@ -1231,7 +1455,13 @@ class LaporanActivity : AppCompatActivity() {
         val selectedPegawai = pegawai.text.toString()
         val selectedChartType = chartList.text.toString()
 
-        val entries = processDataForChart(selectedJenis, selectedData,selectedBulan,selectedTahun,selectedPegawai)
+        val entries = processDataForChart(
+            selectedJenis,
+            selectedData,
+            selectedBulan,
+            selectedTahun,
+            selectedPegawai
+        )
 
         // Prepare categories and data arrays
         val categories = entries.map { entry ->
@@ -1246,11 +1476,13 @@ class LaporanActivity : AppCompatActivity() {
             .chartType(AAChartType.valueOf(selectedChartType.replace(" ", "")))
             .title(generateChartTitle(selectedJenis, selectedData, selectedBulan, selectedTahun))
             .categories(categories)
-            .series(arrayOf(
-                AASeriesElement()
-                    .name(selectedData)
-                    .data(arrayOf(data)) // Wrap data in arrayOf
-            ))
+            .series(
+                arrayOf(
+                    AASeriesElement()
+                        .name(selectedData)
+                        .data(arrayOf(data)) // Wrap data in arrayOf
+                )
+            )
 
         chart.aa_drawChartWithChartModel(aaChartModel)
     }
@@ -1358,6 +1590,7 @@ class LaporanActivity : AppCompatActivity() {
             }
         })
     }
+
     private fun fetchDataPekerja(namaPerusahaan: String) {
         val url = "http://192.168.1.5:8000/api/"
         Log.d("FetchDataError", "Nama: ${namaPerusahaan}")
@@ -1374,8 +1607,9 @@ class LaporanActivity : AppCompatActivity() {
                         try {
                             val responseData = JSONObject(responseBody.string())
                             val pekerjaArray = responseData.getJSONArray("pekerja")
-                            Log.d("List Pekerja",responseData.toString())
-                            pekerjaList = parsePekerjaList(pekerjaArray) // Update pekerjaList with the parsed data
+                            Log.d("List Pekerja", responseData.toString())
+                            pekerjaList =
+                                parsePekerjaList(pekerjaArray) // Update pekerjaList with the parsed data
                             updatePegawaiAdapter() // Update AutoCompleteTextView with the new data
                         } catch (e: JSONException) {
                             Log.e("FetchDataError", "Error parsing JSON: ${e.message}")
@@ -1393,16 +1627,18 @@ class LaporanActivity : AppCompatActivity() {
             }
         })
     }
+
     private fun updatePegawaiAdapter() {
         val pegawaiNames = pekerjaList.map { it.nama }
-        Log.d("List Pekerja",pekerjaList.toString())
-        val pegawaiAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, pegawaiNames)
+        Log.d("List Pekerja", pekerjaList.toString())
+        val pegawaiAdapter =
+            ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, pegawaiNames)
         pegawai.setAdapter(pegawaiAdapter)
     }
 
     private fun parsePekerjaList(pekerjaArray: JSONArray): MutableList<Pekerja> {
         val pekerjaList = mutableListOf<Pekerja>()
-        Log.d("List Pekerja",pekerjaArray.toString())
+        Log.d("List Pekerja", pekerjaArray.toString())
 
         for (i in 0 until pekerjaArray.length()) {
             val pekerjaObject = pekerjaArray.getJSONObject(i)
@@ -1471,6 +1707,7 @@ class LaporanActivity : AppCompatActivity() {
             }
         })
     }
+
     private fun fetchDataSesiPerusahaan(perusahaanId: Int) {
         val url = "http://192.168.1.5:8000/api/"
         val retrofit = Retrofit.Builder()
@@ -1487,12 +1724,14 @@ class LaporanActivity : AppCompatActivity() {
                         try {
                             val jsonResponse = responseBody.string()
                             val responseData = JSONObject(jsonResponse)
-                            val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+                            val dateFormat =
+                                SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
                             val dataArray = responseData.getJSONArray("data")
                             sesilemburItemList.clear()
                             for (i in 0 until dataArray.length()) {
                                 val jsonObject = dataArray.getJSONObject(i)
-                                val jamString = jsonObject.optString("jam") // Get timestamp as string
+                                val jamString =
+                                    jsonObject.optString("jam") // Get timestamp as string
                                 val jamDate = dateFormat.parse(jamString) // Parse string to Date
                                 val sesiItem = session_lembur(
                                     id = jsonObject.optInt("id"),
@@ -1519,6 +1758,7 @@ class LaporanActivity : AppCompatActivity() {
             }
         })
     }
+
     private fun fetchDataIzinPerusahaan(namaPerusahaan: String) {
         val url = "http://192.168.1.5:8000/api/"
         val retrofit = Retrofit.Builder()
@@ -1594,7 +1834,7 @@ class LaporanActivity : AppCompatActivity() {
                             for (i in 0 until dataArray.length()) {
                                 val jsonObject = dataArray.getJSONObject(i)
                                 val jamKeluarString = jsonObject.optString("jam_keluar")
-                                Log.d("Presensi",jamKeluarString)
+                                Log.d("Presensi", jamKeluarString)
                                 // Only create AbsenItem if jam_keluar is not null
                                 if (jamKeluarString != "null") {
                                     val absenItem = AbsenItem(
@@ -1658,7 +1898,8 @@ class LaporanActivity : AppCompatActivity() {
             }
             dates.forEach { date ->
                 calendar.time = date
-                val month = calendar.getDisplayName(Calendar.MONTH, Calendar.LONG, Locale.getDefault())
+                val month =
+                    calendar.getDisplayName(Calendar.MONTH, Calendar.LONG, Locale.getDefault())
                 val year = calendar.get(Calendar.YEAR).toString()
                 months.add(month!!)
                 years.add(year)
@@ -1678,39 +1919,42 @@ class LaporanActivity : AppCompatActivity() {
         // Sort years numerically
         val sortedYears = years.sorted()
 
-        val monthAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, sortedMonths)
-        val yearAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, sortedYears)
+        val monthAdapter =
+            ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, sortedMonths)
+        val yearAdapter =
+            ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, sortedYears)
 
         bulan.setAdapter(monthAdapter)
         tahun.setAdapter(yearAdapter)
     }
 
     private fun getBundle() {
-            bundle = intent?.getBundleExtra("data")
-            if (bundle != null) {
-                bundle?.let {
-                    perusahaan = it.getParcelable("perusahaan")
-                    admin = it.getParcelable("user")
-                }
-                val url = "http://192.168.1.5/getDecryptedLogo/${perusahaan?.id}" // Replace with your actual URL
-    //            name.setText(perusahaan.nama)
-                val imageRequest = ImageRequest(
-                    url,
-                    { response ->
-                        // Set the Bitmap to an ImageView or handle it as needed
-                        logo.setImageBitmap(response)
-                    },
-                    0, 0, ImageView.ScaleType.CENTER_CROP, Bitmap.Config.RGB_565,
-                    { error ->
-                        error.printStackTrace()
-                        Toast.makeText(this, "Failed to fetch profile image", Toast.LENGTH_SHORT).show()
-                    }
-                )
-
-                val requestQueue = Volley.newRequestQueue(this)
-                requestQueue.add(imageRequest)
-            } else {
-                Log.d("Error", "Bundle Not Found")
+        bundle = intent?.getBundleExtra("data")
+        if (bundle != null) {
+            bundle?.let {
+                perusahaan = it.getParcelable("perusahaan")
+                admin = it.getParcelable("user")
             }
+            val url =
+                "http://192.168.1.5/getDecryptedLogo/${perusahaan?.id}" // Replace with your actual URL
+            //            name.setText(perusahaan.nama)
+            val imageRequest = ImageRequest(
+                url,
+                { response ->
+                    // Set the Bitmap to an ImageView or handle it as needed
+                    logo.setImageBitmap(response)
+                },
+                0, 0, ImageView.ScaleType.CENTER_CROP, Bitmap.Config.RGB_565,
+                { error ->
+                    error.printStackTrace()
+                    Toast.makeText(this, "Failed to fetch profile image", Toast.LENGTH_SHORT).show()
+                }
+            )
+
+            val requestQueue = Volley.newRequestQueue(this)
+            requestQueue.add(imageRequest)
+        } else {
+            Log.d("Error", "Bundle Not Found")
         }
+    }
 }

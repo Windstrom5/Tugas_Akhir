@@ -231,6 +231,7 @@
                                 android:fontFamily="@font/righteous_regular"
                                 android:text="Change" />
                             <TextView
+                                android:id="@+id/file"
                                 android:layout_marginStart="10dp"
                                 android:layout_width="wrap_content"
                                 android:textColor="@color/whiteTextColor"

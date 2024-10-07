@@ -46,7 +46,7 @@ class IzinActivity : AppCompatActivity() {
                         replaceFragment(HistoryIzinFragment())
                         true
                     }
-                    R.id.adddinas -> {
+                    R.id.addizin -> {
                         replaceFragment(AddIzinFragment())
                         true
                     }

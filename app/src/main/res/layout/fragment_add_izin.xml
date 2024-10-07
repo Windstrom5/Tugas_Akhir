@@ -207,7 +207,6 @@
                         android:layout_marginStart="100dp"
                         android:layout_marginEnd="100dp"
                         android:gravity="center"
-                        android:enabled="false"
                         android:text="Submit" />
                 </LinearLayout>
             </ScrollView>

@@ -113,6 +113,7 @@ class AddIzinFragment : Fragment() {
 //        acIzin.addTextChangedListener(watcher)
 //        TIAlasan.editText?.addTextChangedListener(watcher)
         save.setOnClickListener {
+            Log.d("Testing",isAllFieldsFilled().toString())
             save.startAnimation()
             if(isAllFieldsFilled()){
                 perusahaan?.let { it1 -> pekerja?.let { it2 -> saveDataIzin( it2, it1) } }
@@ -306,7 +307,11 @@ class AddIzinFragment : Fragment() {
         val nama_Perusahaan = createPartFromString(perusahaan.nama)
         val nama = createPartFromString(pekerja.nama)
         val kategori = createPartFromString(acIzin.text.toString())
-        val tanggal = createPartFromString(TITanggal.editText?.text.toString())
+        val dateFormat = SimpleDateFormat("dd MMMM yyyy", Locale("id", "ID"))
+        val dateInput = TITanggal.editText?.text.toString()
+        val parsedDate = dateFormat.parse(dateInput)
+        val sqlDate = Date(parsedDate?.time ?: 0)
+        val tanggal = createPartFromString(sqlDate.toString()) // Convert back to SQL date format
         val alasan = createPartFromString(TIAlasan.editText?.text.toString())
         val buktifile = selectedFile
         val requestFile = RequestBody.create(MediaType.parse("pdf/*"), buktifile)
@@ -321,15 +326,15 @@ class AddIzinFragment : Fragment() {
                     val apiResponse = response.body()
                     Log.d("ApiResponse", "Status: ${apiResponse?.status}, Message: ${apiResponse?.message}")
                     MotionToast.createToast(requireActivity(), "Add Izin Success",
-                        "Data Dinas Berhasil Ditambahkan",
+                        "Data Izin Berhasil Ditambahkan",
                         MotionToastStyle.SUCCESS,
                         MotionToast.GRAVITY_BOTTOM,
                         MotionToast.LONG_DURATION,
                         ResourcesCompat.getFont(requireContext(), R.font.ralewaybold))
                 } else {
                     save.revertAnimation()
-                    Log.e("ApiResponse", "Error: ${response.code()}")
-                }
+                    val errorMessage = response.errorBody()?.string() ?: "Unknown error"
+                    Log.e("ApiResponse", "Error: ${response.message()} - $errorMessage")                }
             }
 
             override fun onFailure(call: Call<ApiResponse>, t: Throwable) {

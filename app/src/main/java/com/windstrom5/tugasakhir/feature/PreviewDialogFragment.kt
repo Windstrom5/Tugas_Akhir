@@ -2,9 +2,13 @@ package com.windstrom5.tugasakhir.feature
 
 import android.app.Activity
 import android.app.Dialog
+import android.app.DownloadManager
 import android.app.TimePickerDialog
+import android.content.ActivityNotFoundException
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -12,6 +16,7 @@ import android.graphics.Color
 import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Bundle
+import android.os.Environment
 import android.provider.MediaStore
 import android.text.Editable
 import android.text.InputType
@@ -32,6 +37,7 @@ import android.widget.TextView
 import android.widget.TimePicker
 import android.widget.Toast
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.core.content.res.ResourcesCompat
 import androidx.fragment.app.DialogFragment
 import br.com.simplepass.loading_button_lib.customViews.CircularProgressButton
@@ -568,9 +574,9 @@ class PreviewDialogFragment: DialogFragment() {
         call.enqueue(object : Callback<ApiResponse> {
             override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
                 if (response.isSuccessful) {
-                    val vectorDrawable = ContextCompat.getDrawable(requireContext(), R.drawable.done_bitmap)
-                    val bitmap = vectorDrawable?.let { vectorToBitmap(it) }
-                    view?.findViewById<CircularProgressButton>(R.id.acceptButton)?.doneLoadingAnimation(Color.parseColor("#AAFF00"), bitmap)
+//                    val vectorDrawable = ContextCompat.getDrawable(requireContext(), R.drawable.done_bitmap)
+//                    val bitmap = vectorDrawable?.let { vectorToBitmap(it) }
+//                    view?.findViewById<CircularProgressButton>(R.id.acceptButton)?.doneLoadingAnimation(Color.parseColor("#AAFF00"), bitmap)
                     val apiResponse = response.body()
                     Log.d("ApiResponse", "Status: ${apiResponse?.status}, Message: ${apiResponse?.message}")
                     MotionToast.createToast(requireActivity(), "Add Lembur Success",
@@ -591,6 +597,95 @@ class PreviewDialogFragment: DialogFragment() {
             }
         })
 //        setLoading(false)
+    }
+    private fun downloadAndOpenPdf(pdfUrl: String, fileName: String) {
+        // Start downloading the PDF
+        val request = DownloadManager.Request(Uri.parse(pdfUrl))
+            .setTitle(fileName) // The title of the file in download notification
+            .setDescription("Downloading PDF file...")
+            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+            .setAllowedOverMetered(true) // Allow the download over mobile data
+            .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName) // Save location
+
+        // Get the DownloadManager and enqueue the request
+        val downloadManager = context?.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+        val downloadId = downloadManager.enqueue(request)
+
+        // Register a broadcast receiver to handle when the download is complete
+        val onComplete = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                // Check if the completed download is the one we're tracking
+                val id = intent?.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
+                if (id == downloadId) {
+                    openPdfFile(context, fileName)
+                    context?.unregisterReceiver(this) // Unregister the receiver after use
+                }
+            }
+        }
+
+        val intentFilter = IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
+        context?.registerReceiver(onComplete, intentFilter, Context.RECEIVER_NOT_EXPORTED) // Fix for Android 12+
+    }
+
+    // Function to open the PDF file
+    private fun openPdfFile(context: Context?, fileName: String) {
+        val file = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), fileName)
+        val fileUri = FileProvider.getUriForFile(
+            requireContext(),
+            (context?.applicationContext?.packageName) + ".provider", // FileProvider authority
+            file
+        )
+
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(fileUri, "application/pdf")
+            flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NO_HISTORY
+        }
+
+        try {
+            if (context != null) {
+                context.startActivity(intent)
+            }
+        } catch (e: ActivityNotFoundException) {
+            Toast.makeText(context, "No PDF viewer found", Toast.LENGTH_SHORT).show()
+        }
+    }
+    private fun downloadImage(url: String,fileName: String) {
+        val request = DownloadManager.Request(Uri.parse(url))
+            .setTitle(fileName) // The title of the file in download notification
+            .setDescription("Downloading image...")
+            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+            .setDestinationInExternalPublicDir(Environment.DIRECTORY_PICTURES, "downloaded_image.jpg") // Change file name as needed
+
+        val downloadManager = requireContext().getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+        val downloadId = downloadManager.enqueue(request)
+
+        // Register a BroadcastReceiver to listen for the download completion
+        val onComplete = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                val id = intent?.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
+                if (id == downloadId) {
+                    // Open the image after download completes
+                    openImage(context,fileName)
+                    context?.unregisterReceiver(this) // Unregister the receiver
+                }
+            }
+        }
+
+        val intentFilter = IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
+        context?.registerReceiver(onComplete, intentFilter, Context.RECEIVER_NOT_EXPORTED) // Fix for Android 12+
+    }
+
+    private fun openImage(context: Context?,fileName: String) {
+        val file = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), fileName)
+        val imageUri = FileProvider.getUriForFile(requireContext(), "${context?.packageName}.fileprovider", file) // Set up FileProvider in AndroidManifest.xml
+
+        val intent = Intent().apply {
+            action = Intent.ACTION_VIEW
+            setDataAndType(imageUri, "image/*")
+            flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+        }
+
+        context?.startActivity(intent)
     }
     private fun saveDataSesi(){
         val url = "http://192.168.1.5:8000/api/"
@@ -617,9 +712,9 @@ class PreviewDialogFragment: DialogFragment() {
         call.enqueue(object : Callback<ApiResponse> {
             override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
                 if (response.isSuccessful) {
-                    val vectorDrawable = ContextCompat.getDrawable(requireContext(), R.drawable.done_bitmap)
-                    val bitmap = vectorDrawable?.let { vectorToBitmap(it) }
-                    view?.findViewById<CircularProgressButton>(R.id.acceptButton)?.doneLoadingAnimation(Color.parseColor("#AAFF00"), bitmap)
+//                    val vectorDrawable = ContextCompat.getDrawable(requireContext(), R.drawable.done_bitmap)
+//                    val bitmap = vectorDrawable?.let { vectorToBitmap(it) }
+//                    view?.findViewById<CircularProgressButton>(R.id.acceptButton)?.doneLoadingAnimation(Color.parseColor("#AAFF00"), bitmap)
                     val apiResponse = response.body()
                     Log.d("ApiResponse", "Status: ${apiResponse?.status}, Message: ${apiResponse?.message}")
                     MotionToast.createToast(requireActivity(), "Add Lembur Success",
@@ -666,16 +761,22 @@ class PreviewDialogFragment: DialogFragment() {
                 tujuanInputLayout.visibility = View.VISIBLE
                 tujuanInputLayout.isEnabled = false
                 tujuanInputLayout.editText?.setText(dinas?.tujuan)
-
                 val kegiatanInputLayout = view.findViewById<TextInputLayout>(R.id.kegiatanInputLayout)
                 kegiatanInputLayout.isEnabled = false
                 kegiatanInputLayout.editText?.setText(dinas?.kegiatan)
-
                 val pdfUrl = "http://192.168.1.5:8000/api/Dinas/decryptBukti/${dinas?.id}"
                 val pdfView = view.findViewById<PDFView>(R.id.pdfView)
                 pdfView.visibility = View.VISIBLE
                 val retrievePdfTask = RetrievePDFfromUrl(pdfView)
                 retrievePdfTask.execute(pdfUrl)
+                val downloadbutton = view.findViewById<Button>(R.id.changeFile)
+                downloadbutton.text = "Download File"
+                view.findViewById<TextView>(R.id.file).visibility = View.GONE
+                view.findViewById<TextView>(R.id.selectedFileName).visibility = View.GONE
+                val fileName = "BuktiDinas_${dinas?.nama_pekerja}_dinas_${tanggalBerangkatFormatted}.pdf"
+                downloadbutton.setOnClickListener{
+                    downloadAndOpenPdf(pdfUrl, fileName)
+                }
                 view.findViewById<CircularProgressButton>(R.id.acceptButton).setOnClickListener {
                     view.findViewById<CircularProgressButton>(R.id.acceptButton).startAnimation()
                     updateStatus("Accept","Dinas")
@@ -798,7 +899,12 @@ class PreviewDialogFragment: DialogFragment() {
             perusahaan = arguments?.getParcelable("perusahaan")
             if(category == "Respond") {
                 view.findViewById<TextInputLayout>(R.id.namaInputLayout).editText?.setText(lembur?.nama_pekerja)
-                view.findViewById<TextInputLayout>(R.id.tanggalInputLayout).editText?.setText(lembur?.tanggal.toString())
+                // Step 1: Use the correct format for parsing the input date
+                val inputDateFormat = SimpleDateFormat("EEE MMM dd HH:mm:ss z yyyy", Locale.ENGLISH) // This format matches the input string
+                val parsedDate = inputDateFormat.parse(lembur?.tanggal.toString())
+                val outputDateFormat = SimpleDateFormat("dd MMMM yyyy", Locale("id", "ID"))
+                val formattedDate = outputDateFormat.format(parsedDate!!)
+                view.findViewById<TextInputLayout>(R.id.tanggalInputLayout).editText?.setText(formattedDate)
                 view.findViewById<TextInputLayout>(R.id.masukInputLayout).editText?.setText(lembur?.waktu_masuk.toString())
                 view.findViewById<TextInputLayout>(R.id.keluarInputLayout).editText?.setText(lembur?.waktu_pulang.toString())
                 view.findViewById<TextInputLayout>(R.id.kegiatanInputLayout).editText?.setText(lembur?.pekerjaan)
@@ -818,6 +924,14 @@ class PreviewDialogFragment: DialogFragment() {
                         Toast.makeText(requireContext(), "Failed to fetch bukti image", Toast.LENGTH_SHORT).show()
                     }
                 )
+                val downloadbutton = view.findViewById<Button>(R.id.changeFile)
+                downloadbutton.text = "Download File"
+                view.findViewById<TextView>(R.id.file).visibility = View.GONE
+                view.findViewById<TextView>(R.id.selectedFileName).visibility = View.GONE
+                val fileName = "Bukti_${lembur?.nama_pekerja}_lembur_${lembur?.tanggal}.png"
+                downloadbutton.setOnClickListener{
+                    downloadImage(url,fileName)
+                }
                 val requestQueue = Volley.newRequestQueue(requireContext())
                 requestQueue.add(imageRequest)
                 view.findViewById<CircularProgressButton>(R.id.acceptButton).setOnClickListener {
@@ -949,6 +1063,7 @@ class PreviewDialogFragment: DialogFragment() {
                         }
                         updateSessionAdminDetails(selectedSession)
                     }
+                    
                     view.findViewById<CircularProgressButton>(R.id.acceptButton).setOnClickListener {
                         view.findViewById<CircularProgressButton>(R.id.acceptButton).startAnimation()
                         updateStatus("Accept", "Sesi")
@@ -1039,23 +1154,57 @@ class PreviewDialogFragment: DialogFragment() {
         }else if (izin != null){
             if(category == "Respond"){
                 view.findViewById<TextInputLayout>(R.id.namaInputLayout).editText?.setText(izin?.nama_pekerja)
-                view.findViewById<TextInputLayout>(R.id.tanggalInputLayout).editText?.setText(izin?.tanggal.toString())
+                val inputDateFormat = SimpleDateFormat("EEE MMM dd HH:mm:ss z yyyy", Locale.ENGLISH) // This format matches the input string
+                val parsedDate = inputDateFormat.parse(izin?.tanggal.toString())
+                val outputDateFormat = SimpleDateFormat("dd MMMM yyyy", Locale("id", "ID"))
+                val formattedDate = outputDateFormat.format(parsedDate!!)
+                view.findViewById<TextInputLayout>(R.id.tanggalInputLayout).editText?.setText(formattedDate)
                 view.findViewById<TextInputLayout>(R.id.kategoriInputLayout).editText?.setText(izin?.kategori)
                 view.findViewById<TextInputLayout>(R.id.kegiatanInputLayout).editText?.setText(izin?.alasan)
-                val attachmentUrl = "http://192.168.1.5:8000/storage/${izin?.bukti}"
-                val isPdf = attachmentUrl.endsWith(".pdf")
-                if (isPdf) {
-                    val pdfView = view.findViewById<PDFView>(R.id.pdfView)
+                val pdfView = view.findViewById<PDFView>(R.id.pdfView)
+                val imageView = view.findViewById<ImageView>(R.id.imageView)
+                val isPdf = izin?.bukti?.endsWith(".pdf")
+                val url = "http://192.168.1.5:8000/api/Izin/decryptBukti/${izin?.id}"
+                if (isPdf == true) {
+                    Log.d("CheckFile","PDF File")
                     pdfView.visibility = View.VISIBLE
+                    imageView.visibility = View.GONE
                     val retrievePdfTask = RetrievePDFfromUrl(pdfView)
-                    retrievePdfTask.execute(attachmentUrl)
+                    retrievePdfTask.execute(url)
+                    val downloadbutton = view.findViewById<Button>(R.id.changeFile)
+                    downloadbutton.text = "Download File"
+                    view.findViewById<TextView>(R.id.file).visibility = View.GONE
+                    view.findViewById<TextView>(R.id.selectedFileName).visibility = View.GONE
+                    val fileName = "BuktiIzin_${izin?.nama_pekerja}_izin_${izin?.tanggal}.pdf"
+                    downloadbutton.setOnClickListener{
+                        downloadAndOpenPdf(url, fileName)
+                    }
                 } else {
-                    // Load image using Glide or Picasso
-                    val imageView = view.findViewById<ImageView>(R.id.imageView)
+                    Log.d("CheckFile","PDF File")
+                    val imageRequest = ImageRequest(
+                        url,
+                        { response ->
+                            // Set the Bitmap to an ImageView or handle it as needed
+                            imageView.setImageBitmap(response)
+                        },
+                        0, 0, ImageView.ScaleType.CENTER_CROP, Bitmap.Config.RGB_565,
+                        { error ->
+                            error.printStackTrace()
+                            Toast.makeText(requireContext(), "Failed to fetch bukti image", Toast.LENGTH_SHORT).show()
+                        }
+                    )
                     imageView.visibility = View.VISIBLE
-                    Glide.with(requireContext())
-                        .load(attachmentUrl)
-                        .into(imageView)
+                    pdfView.visibility = View.GONE
+                    val requestQueue = Volley.newRequestQueue(requireContext())
+                    requestQueue.add(imageRequest)
+                    val downloadbutton = view.findViewById<Button>(R.id.changeFile)
+                    downloadbutton.text = "Download File"
+                    view.findViewById<TextView>(R.id.file).visibility = View.GONE
+                    view.findViewById<TextView>(R.id.selectedFileName).visibility = View.GONE
+                    val fileName = "BuktiIzin_${izin?.nama_pekerja}_izin_${izin?.tanggal}.pdf"
+                    downloadbutton.setOnClickListener{
+                        downloadImage(url,fileName)
+                    }
                 }
                 view.findViewById<CircularProgressButton>(R.id.acceptButton).setOnClickListener {
                     view.findViewById<CircularProgressButton>(R.id.acceptButton).startAnimation()
@@ -1098,30 +1247,40 @@ class PreviewDialogFragment: DialogFragment() {
                 kegiatan.editText?.inputType = InputType.TYPE_TEXT_FLAG_MULTI_LINE
                 kegiatan.editText?.isFocusable = true
                 kegiatan.editText?.isFocusableInTouchMode = true
-
-                val attachmentUrl = "http://192.168.1.5:8000/storage/${izin?.bukti}"
-                val isPdf = attachmentUrl.endsWith(".pdf")
-                if (isPdf) {
-                    // Create an instance of RetrievePDFfromUrl passing the PDFView
-                    val pdfView = view.findViewById<PDFView>(R.id.pdfView)
+                val pdfView = view.findViewById<PDFView>(R.id.pdfView)
+                val imageView = view.findViewById<ImageView>(R.id.imageView)
+                val isPdf = izin?.bukti?.endsWith(".pdf")
+                val url = "http://192.168.1.5:8000/api/Izin/decryptBukti/${izin?.id}"
+                if (isPdf == true) {
+                    Log.d("CheckFile","PDF File")
                     pdfView.visibility = View.VISIBLE
+                    imageView.visibility = View.GONE
                     val retrievePdfTask = RetrievePDFfromUrl(pdfView)
-
-                    // Execute the task with the attachment URL
-                    retrievePdfTask.execute(attachmentUrl)
+                    retrievePdfTask.execute(url)
                 } else {
-                    // Load image using Glide or Picasso
-                    val imageView = view.findViewById<ImageView>(R.id.imageView)
+                    Log.d("CheckFile","PDF File")
+                    val imageRequest = ImageRequest(
+                        url,
+                        { response ->
+                            // Set the Bitmap to an ImageView or handle it as needed
+                            imageView.setImageBitmap(response)
+                        },
+                        0, 0, ImageView.ScaleType.CENTER_CROP, Bitmap.Config.RGB_565,
+                        { error ->
+                            error.printStackTrace()
+                            Toast.makeText(requireContext(), "Failed to fetch bukti image", Toast.LENGTH_SHORT).show()
+                        }
+                    )
                     imageView.visibility = View.VISIBLE
-                    Glide.with(requireContext())
-                        .load(attachmentUrl)
-                        .into(imageView)
+                    pdfView.visibility = View.GONE
+                    val requestQueue = Volley.newRequestQueue(requireContext())
+                    requestQueue.add(imageRequest)
                 }
-                val fileName = attachmentUrl.substringAfterLast("/")
                 val acceptButton = view.findViewById<CircularProgressButton>(R.id.acceptButton)
                 acceptButton.setText("Save")
                 val cancelButton = view.findViewById<CircularProgressButton>(R.id.rejectButton)
                 cancelButton.setText("Cancel")
+                val fileName = url.substringAfterLast("/")
                 view.findViewById<TextView>(R.id.text).visibility = View.VISIBLE
                 view.findViewById<LinearLayout>(R.id.layout).visibility = View.VISIBLE
                 view.findViewById<TextView>(R.id.selectedFileName).setText(fileName)
@@ -1398,9 +1557,9 @@ class PreviewDialogFragment: DialogFragment() {
         call.enqueue(object : Callback<ApiResponse> {
             override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
                 if (response.isSuccessful) {
-                    val vectorDrawable = ContextCompat.getDrawable(requireContext(), R.drawable.done_bitmap)
-                    val bitmap = vectorDrawable?.let { vectorToBitmap(it) }
-                    view?.findViewById<CircularProgressButton>(R.id.acceptButton)?.doneLoadingAnimation(Color.parseColor("#AAFF00"), bitmap)
+//                    val vectorDrawable = ContextCompat.getDrawable(requireContext(), R.drawable.done_bitmap)
+//                    val bitmap = vectorDrawable?.let { vectorToBitmap(it) }
+//                    view?.findViewById<CircularProgressButton>(R.id.acceptButton)?.doneLoadingAnimation(Color.parseColor("#AAFF00"), bitmap)
                     val apiResponse = response.body()
                     Log.d("ApiResponse", "Status: ${apiResponse?.status}, Message: ${apiResponse?.message}")
                     activity?.let { motionToastActivity ->
@@ -1718,9 +1877,9 @@ class PreviewDialogFragment: DialogFragment() {
         call.enqueue(object : Callback<ApiResponse> {
             override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
                 if (response.isSuccessful) {
-                    val vectorDrawable = ContextCompat.getDrawable(requireContext(), R.drawable.done_bitmap)
-                    val bitmap = vectorDrawable?.let { vectorToBitmap(it) }
-                    view?.findViewById<CircularProgressButton>(R.id.acceptButton)?.doneLoadingAnimation(Color.parseColor("#AAFF00"), bitmap)
+//                    val vectorDrawable = ContextCompat.getDrawable(requireContext(), R.drawable.done_bitmap)
+//                    val bitmap = vectorDrawable?.let { vectorToBitmap(it) }
+//                    view?.findViewById<CircularProgressButton>(R.id.acceptButton)?.doneLoadingAnimation(Color.parseColor("#AAFF00"), bitmap)
                     if (category == "Izin") {
                         MotionToast.createToast(
                             requireActivity(),
