@@ -254,7 +254,7 @@ class UserActivity : AppCompatActivity() {
             while (isFetching) {
                 try {
                     Log.d("Pinged", "Attempting to ping")
-                    val url = URL("http://192.168.1.5:8000") // Replace with your actual endpoint
+                    val url = URL("http://192.168.1.4:8000") // Replace with your actual endpoint
                     val connection = url.openConnection() as HttpURLConnection
                     connection.requestMethod = "GET"
                     connection.connectTimeout = 5000
@@ -842,7 +842,7 @@ class UserActivity : AppCompatActivity() {
                 perusahaan = it.getParcelable("perusahaan")
                 pekerja = it.getParcelable("user")
             }
-            val url = "http://192.168.1.5:8000/api/Pekerja/decryptProfile/${pekerja?.id}" // Replace with your actual URL
+            val url = "http://192.168.1.4:8000/api/Pekerja/decryptProfile/${pekerja?.id}" // Replace with your actual URL
 
             val imageRequest = ImageRequest(
                 url,

@@ -196,7 +196,7 @@ class LoginActivity : AppCompatActivity() {
         }
     }
 //    private fun fetchDataFromApi() {
-//        val url = "http://192.168.1.5:8000/api/GetPerusahaan"
+//        val url = "http://192.168.1.4:8000/api/GetPerusahaan"
 //        val jsonObjectRequest = JsonObjectRequest(Request.Method.GET, url, null,
 //            { response ->
 //                val perusahaanArray = response.getJSONArray("perusahaan")
@@ -309,7 +309,7 @@ class LoginActivity : AppCompatActivity() {
         login.isEnabled = isAllFieldsFilled
     }
     private fun login(email: String, password: String) {
-        val url = "http://192.168.1.5:8000/api/login"
+        val url = "http://192.168.1.4:8000/api/login"
 //        val checkBoxRememberMe = findViewById<CheckBox>(R.id.checkBoxRememberMe)
 //        val rememberMeChecked = checkBoxRememberMe.isChecked
         val sharedPreferencesManager = SharedPreferencesManager(this)
@@ -405,7 +405,7 @@ class LoginActivity : AppCompatActivity() {
                                 parseDate(user.getString("tanggal_lahir")),
                                 user.getString("profile")
                             )
-                            val url2 = "http://192.168.1.5:8000/api/"
+                            val url2 = "http://192.168.1.4:8000/api/"
                             val retrofit = Builder()
                                 .baseUrl(url2)
                                 .addConverterFactory(GsonConverterFactory.create())

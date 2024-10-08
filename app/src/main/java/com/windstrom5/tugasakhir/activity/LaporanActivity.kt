@@ -1160,10 +1160,10 @@ class LaporanActivity : AppCompatActivity() {
         selectedBulan: String,
         selectedTahun: String
     ) {
-        val selectedPegawai =
-            pegawai.text.toString()  // Retrieve selected employee or check if empty
+        val selectedPegawai = pegawai.text.toString()  // Retrieve selected employee or check if empty
         val selectedChartType = chartList.text.toString()  // Retrieve selected chart type
 
+        // Process data for chart
         val entries = processDataForChart(
             selectedJenis,
             selectedData,
@@ -1171,8 +1171,27 @@ class LaporanActivity : AppCompatActivity() {
             selectedTahun,
             selectedPegawai
         )
+
+        // Find and set up suggestionsCardView and suggestionsText
+        suggestionsCardView = findViewById(R.id.suggestionsCardView)
+        suggestionsText = findViewById(R.id.suggestionsText)
         Log.d("EntriesData", "Entries: $entries")
 
+        // If entries are null, show not found text and hide the chart
+        if (entries.isEmpty()) {
+            val notfound = findViewById<TextView>(R.id.not_found)
+            notfound.visibility = View.VISIBLE
+            chart.visibility = View.GONE
+            suggestionsCardView.visibility = View.GONE
+            return  // Exit the function
+        } else {
+            val notfound = findViewById<TextView>(R.id.not_found)
+            notfound.visibility = View.GONE
+            chart.visibility = View.VISIBLE
+            suggestionsCardView.visibility = View.VISIBLE
+        }
+
+        // Generate suggestions based on entries
         val suggestions = generateSuggestions(
             entries,
             selectedData,
@@ -1180,12 +1199,10 @@ class LaporanActivity : AppCompatActivity() {
             selectedTahun,
             selectedPegawai
         )
-        suggestionsCardView = findViewById(R.id.suggestionsCardView)
-        suggestionsText = findViewById(R.id.suggestionsText)
         suggestionsText.text = suggestions
         suggestionsCardView.visibility = if (suggestions.isNotEmpty()) View.VISIBLE else View.GONE
 
-        // Determine the chart type, defaulting to Bar if none selected
+        // Determine the chart type, defaulting to Bar if none is selected
         val chartType = when (selectedChartType) {
             "Bar" -> AAChartType.Bar
             "Line" -> AAChartType.Line
@@ -1208,47 +1225,38 @@ class LaporanActivity : AppCompatActivity() {
         // Map the original y-values (decimal) to the chart data
         val data = entries.map { it.y.toFloat() }.toTypedArray()
         val categories: Array<String>
+
+        // If selectedData is 'jenis izin', map the categories to izin kategori
         if (selectedData == "jenis izin") {
-            val distribusiEntries =
-                entries  // Using entries returned from processDataForChart directly
+            val distribusiEntries = entries  // Use entries directly from processDataForChart
             categories = distribusiEntries.map { entry ->
-                // Using entry.x hashCode to find the corresponding kategori
+                // Use entry.x hashCode to find the corresponding kategori
                 izinItemList.first { it.kategori.hashCode().toFloat() == entry.x }.kategori
             }.toTypedArray()
         } else {
+            // Map employee ID to name for other chart types
             categories = entries.map { entry ->
                 val employeeId = entry.x.toInt()
-                val employeeName =
-                    getEmployeeNameById(employeeId)  // Convert employee ID (x) to name
-                Log.d(
-                    "EmployeeNameLookup",
-                    "Looking up name for employee ID: $employeeId, Result: $employeeName"
-                )
+                val employeeName = getEmployeeNameById(employeeId)  // Convert employee ID (x) to name
+                Log.d("EmployeeNameLookup", "Looking up name for employee ID: $employeeId, Result: $employeeName")
                 employeeName  // Return employee name
             }.toTypedArray()
         }
+
         // Construct the chart title dynamically based on selected options
-        val chartTitle = buildChartTitle(
-            selectedJenis,
-            selectedData,
-            selectedBulan,
-            selectedTahun,
-            selectedPegawai
-        )
+        val chartTitle = buildChartTitle(selectedJenis, selectedData, selectedBulan, selectedTahun, selectedPegawai)
         Log.d("ChartGeneration", "Chart title: $chartTitle")
 
         // Create and configure the AAChartModel with the processed data
         val aaChartModel = AAChartModel()
             .chartType(chartType)
             .title(chartTitle)  // Use the dynamic title
-            .categories(categories)  // Use employee names as categories on the x-axis
-            .series(
-                arrayOf(
-                    AASeriesElement()
-                        .name(selectedData)
-                        .data(data as Array<Any>)  // Set y-values as chart data
-                )
-            )
+            .categories(categories)  // Use employee names or categories on the x-axis
+            .series(arrayOf(
+                AASeriesElement()
+                    .name(selectedData)
+                    .data(data as Array<Any>)  // Set y-values as chart data
+            ))
 
         Log.d("ChartGeneration", "Chart model generated with data")
 
@@ -1261,6 +1269,7 @@ class LaporanActivity : AppCompatActivity() {
         // Revert any loading animations
         generate.revertAnimation()
     }
+
 
     // Helper function to convert decimal hours to HH:mm format
     private fun convertToHoursAndMinutes(decimalHours: Float): String {
@@ -1541,7 +1550,7 @@ class LaporanActivity : AppCompatActivity() {
     }
 
     private fun fetchDataDinasPerusahaan(namaPerusahaan: String) {
-        val url = "http://192.168.1.5:8000/api/"
+        val url = "http://192.168.1.4:8000/api/"
         val retrofit = Retrofit.Builder()
             .baseUrl(url)
             .addConverterFactory(GsonConverterFactory.create())
@@ -1592,7 +1601,7 @@ class LaporanActivity : AppCompatActivity() {
     }
 
     private fun fetchDataPekerja(namaPerusahaan: String) {
-        val url = "http://192.168.1.5:8000/api/"
+        val url = "http://192.168.1.4:8000/api/"
         Log.d("FetchDataError", "Nama: ${namaPerusahaan}")
         val retrofit = Retrofit.Builder()
             .baseUrl(url)
@@ -1658,7 +1667,7 @@ class LaporanActivity : AppCompatActivity() {
     }
 
     private fun fetchDataLemburPerusahaan(namaPerusahaan: String) {
-        val url = "http://192.168.1.5:8000/api/"
+        val url = "http://192.168.1.4:8000/api/"
         val retrofit = Retrofit.Builder()
             .baseUrl(url)
             .addConverterFactory(GsonConverterFactory.create())
@@ -1709,7 +1718,7 @@ class LaporanActivity : AppCompatActivity() {
     }
 
     private fun fetchDataSesiPerusahaan(perusahaanId: Int) {
-        val url = "http://192.168.1.5:8000/api/"
+        val url = "http://192.168.1.4:8000/api/"
         val retrofit = Retrofit.Builder()
             .baseUrl(url)
             .addConverterFactory(GsonConverterFactory.create())
@@ -1760,7 +1769,7 @@ class LaporanActivity : AppCompatActivity() {
     }
 
     private fun fetchDataIzinPerusahaan(namaPerusahaan: String) {
-        val url = "http://192.168.1.5:8000/api/"
+        val url = "http://192.168.1.4:8000/api/"
         val retrofit = Retrofit.Builder()
             .baseUrl(url)
             .addConverterFactory(GsonConverterFactory.create())
@@ -1810,7 +1819,7 @@ class LaporanActivity : AppCompatActivity() {
     }
 
     private fun fetchDataPresensiPerusahaan(namaPerusahaan: String) {
-        val url = "http://192.168.1.5:8000/api/"
+        val url = "http://192.168.1.4:8000/api/"
         val retrofit = Retrofit.Builder()
             .baseUrl(url)
             .addConverterFactory(GsonConverterFactory.create())
@@ -1936,7 +1945,7 @@ class LaporanActivity : AppCompatActivity() {
                 admin = it.getParcelable("user")
             }
             val url =
-                "http://192.168.1.5/getDecryptedLogo/${perusahaan?.id}" // Replace with your actual URL
+                "http://192.168.1.4/getDecryptedLogo/${perusahaan?.id}" // Replace with your actual URL
             //            name.setText(perusahaan.nama)
             val imageRequest = ImageRequest(
                 url,

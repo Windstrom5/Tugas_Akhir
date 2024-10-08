@@ -295,25 +295,19 @@
                     android:orientation="vertical">
 
                     <TextView
-                        android:id="@+id/barChartTitleTV"
+                        android:id="@+id/not_found"
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="left"
-                        android:text="Statistic"
-                        android:textColor="@color/mdtp_red"
-                        android:textSize="20sp"
-                        android:textStyle="normal" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="10dp"
-                        android:gravity="left"
-                        android:text="Taxes"
-                        android:textColor="@color/grey"
-                        android:textSize="15sp"
-                        android:textStyle="normal" />
-
+                        android:layout_height="match_parent"
+                        android:layout_marginTop="50dp"
+                        android:layout_marginBottom="50dp"
+                        android:layout_marginStart="50dp"
+                        android:layout_marginEnd="50dp"
+                        android:gravity="center"
+                        android:textSize="25dp"
+                        android:fontFamily="@font/modern_school"
+                        android:textColor="@color/black"
+                        android:text="Data Not Found"
+                        android:visibility="gone"/>
                     <com.github.aachartmodel.aainfographics.aachartcreator.AAChartView
                         android:id="@+id/barChart"
                         android:layout_width="match_parent"

@@ -209,10 +209,10 @@ class SettingActivity : AppCompatActivity() {
 
         val url = if (role == "Admin") {
             admin = bundle!!.getParcelable("user") ?: return
-            "http://192.168.1.5/Admin/getDecryptedProfile/${admin!!.id}" // Replace with your actual URL
+            "http://192.168.1.4/Admin/getDecryptedProfile/${admin!!.id}" // Replace with your actual URL
         } else {
             pekerja = bundle!!.getParcelable("user") ?: return
-            "http://192.168.1.5/Pekerja/getDecryptedProfile/${pekerja!!.id}" // Replace with your actual URL
+            "http://192.168.1.4/Pekerja/getDecryptedProfile/${pekerja!!.id}" // Replace with your actual URL
         }
 
         val imageRequest = ImageRequest(
@@ -264,7 +264,7 @@ class SettingActivity : AppCompatActivity() {
     }
     fun updateBiometricData(adminId: Int, biometricData: ByteArray?) {
 
-        val url = "http://192.168.1.5/api/admin/$adminId/updateBiometricData"
+        val url = "http://192.168.1.4/api/admin/$adminId/updateBiometricData"
 
         val requestBody = MultipartBody.Builder()
             .setType(MultipartBody.FORM)

@@ -194,7 +194,7 @@ class CompanyActivity : AppCompatActivity() {
     }
     private fun deleteCompany(idPerusahaan: Int, callback: (Boolean) -> Unit) {
         val retrofit = Retrofit.Builder()
-            .baseUrl("http://192.168.1.5:8000/api/") // Replace with your base URL
+            .baseUrl("http://192.168.1.4:8000/api/") // Replace with your base URL
             .addConverterFactory(GsonConverterFactory.create())
             .build()
 
@@ -263,7 +263,7 @@ class CompanyActivity : AppCompatActivity() {
             .show()
     }
     private fun fetchDataFromApi(namaPerusahaan: String) {
-        val url = "http://192.168.1.5:8000/api/"
+        val url = "http://192.168.1.4:8000/api/"
         Log.d("FetchDataError", "Nama: ${namaPerusahaan}")
         val retrofit = Retrofit.Builder()
             .baseUrl(url)
@@ -418,7 +418,7 @@ class CompanyActivity : AppCompatActivity() {
                 }
                 if (perusahaan?.logo != "null") {
                     val imageUrl =
-                        "http://192.168.1.5:8000/api/Perusahaan/decryptLogo/${perusahaan?.id}"
+                        "http://192.168.1.4:8000/api/Perusahaan/decryptLogo/${perusahaan?.id}"
                     val imageRequest = ImageRequest(
                         imageUrl,
                         { response ->

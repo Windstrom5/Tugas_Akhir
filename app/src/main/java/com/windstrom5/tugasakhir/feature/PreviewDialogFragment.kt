@@ -397,7 +397,7 @@ class PreviewDialogFragment: DialogFragment() {
                 }
                 // Load image based on matching session
                 val imageView = view?.findViewById<ImageView>(R.id.imageView)
-                val url = "http://192.168.1.5:8000/api/Lembur/Session/decryptBukti/${firstMatchingSession.id}"
+                val url = "http://192.168.1.4:8000/api/Lembur/Session/decryptBukti/${firstMatchingSession.id}"
 
                 val imageRequest = ImageRequest(
                     url,
@@ -466,7 +466,7 @@ class PreviewDialogFragment: DialogFragment() {
 //                view?.findViewById<TextInputLayout>(R.id.tanggalInputLayout)?.editText?.setText(tanggalFormatted)
                 // Load image based on matching session
                 val imageView = view?.findViewById<ImageView>(R.id.imageView)
-                val url = "http://192.168.1.5:8000/api/Lembur/Session/decryptBukti/${firstMatchingSession.id}"
+                val url = "http://192.168.1.4:8000/api/Lembur/Session/decryptBukti/${firstMatchingSession.id}"
 
                 val imageRequest = ImageRequest(
                     url,
@@ -547,7 +547,7 @@ class PreviewDialogFragment: DialogFragment() {
         }
     }
     private fun updateDataSesi(){
-        val url = "http://192.168.1.5:8000/api/"
+        val url = "http://192.168.1.4:8000/api/"
 
         val retrofit = Retrofit.Builder()
             .baseUrl(url)
@@ -688,7 +688,7 @@ class PreviewDialogFragment: DialogFragment() {
         context?.startActivity(intent)
     }
     private fun saveDataSesi(){
-        val url = "http://192.168.1.5:8000/api/"
+        val url = "http://192.168.1.4:8000/api/"
 
         val retrofit = Retrofit.Builder()
             .baseUrl(url)
@@ -764,7 +764,7 @@ class PreviewDialogFragment: DialogFragment() {
                 val kegiatanInputLayout = view.findViewById<TextInputLayout>(R.id.kegiatanInputLayout)
                 kegiatanInputLayout.isEnabled = false
                 kegiatanInputLayout.editText?.setText(dinas?.kegiatan)
-                val pdfUrl = "http://192.168.1.5:8000/api/Dinas/decryptBukti/${dinas?.id}"
+                val pdfUrl = "http://192.168.1.4:8000/api/Dinas/decryptBukti/${dinas?.id}"
                 val pdfView = view.findViewById<PDFView>(R.id.pdfView)
                 pdfView.visibility = View.VISIBLE
                 val retrievePdfTask = RetrievePDFfromUrl(pdfView)
@@ -868,7 +868,7 @@ class PreviewDialogFragment: DialogFragment() {
                 kegiatanInputLayout.editText?.isFocusable = true
                 kegiatanInputLayout.editText?.isFocusableInTouchMode = true
                 kegiatanInputLayout.editText?.setText(dinas?.kegiatan)
-                val pdfUrl = "http://192.168.1.5:8000/api/Dinas/decryptBukti/${dinas?.id}"
+                val pdfUrl = "http://192.168.1.4:8000/api/Dinas/decryptBukti/${dinas?.id}"
                 val pdfView = view.findViewById<PDFView>(R.id.pdfView)
                 pdfView.visibility = View.VISIBLE
                 val retrievePdfTask = RetrievePDFfromUrl(pdfView)
@@ -911,7 +911,7 @@ class PreviewDialogFragment: DialogFragment() {
                 val imageView = view.findViewById<ImageView>(R.id.imageView)
                 imageView.visibility = View.VISIBLE
                 val url =
-                    "http://192.168.1.5:8000/api/Lembur/decryptBukti/${lembur?.id}" // Replace with your actual URL
+                    "http://192.168.1.4:8000/api/Lembur/decryptBukti/${lembur?.id}" // Replace with your actual URL
                 val imageRequest = ImageRequest(
                     url,
                     { response ->
@@ -1116,7 +1116,7 @@ class PreviewDialogFragment: DialogFragment() {
                 val imageView = view.findViewById<ImageView>(R.id.imageView)
                 imageView.visibility = View.VISIBLE
                 val url =
-                    "http://192.168.1.5:8000/api/Lembur/decryptBukti/${lembur?.id}" // Replace with your actual URL
+                    "http://192.168.1.4:8000/api/Lembur/decryptBukti/${lembur?.id}" // Replace with your actual URL
                 val imageRequest = ImageRequest(
                     url,
                     { response ->
@@ -1164,7 +1164,7 @@ class PreviewDialogFragment: DialogFragment() {
                 val pdfView = view.findViewById<PDFView>(R.id.pdfView)
                 val imageView = view.findViewById<ImageView>(R.id.imageView)
                 val isPdf = izin?.bukti?.endsWith(".pdf")
-                val url = "http://192.168.1.5:8000/api/Izin/decryptBukti/${izin?.id}"
+                val url = "http://192.168.1.4:8000/api/Izin/decryptBukti/${izin?.id}"
                 if (isPdf == true) {
                     Log.d("CheckFile","PDF File")
                     pdfView.visibility = View.VISIBLE
@@ -1250,7 +1250,7 @@ class PreviewDialogFragment: DialogFragment() {
                 val pdfView = view.findViewById<PDFView>(R.id.pdfView)
                 val imageView = view.findViewById<ImageView>(R.id.imageView)
                 val isPdf = izin?.bukti?.endsWith(".pdf")
-                val url = "http://192.168.1.5:8000/api/Izin/decryptBukti/${izin?.id}"
+                val url = "http://192.168.1.4:8000/api/Izin/decryptBukti/${izin?.id}"
                 if (isPdf == true) {
                     Log.d("CheckFile","PDF File")
                     pdfView.visibility = View.VISIBLE
@@ -1524,7 +1524,7 @@ class PreviewDialogFragment: DialogFragment() {
         acTujuan: AutoCompleteTextView,
         TIkegiatan: TextInputLayout
     ) {
-        val url = "http://192.168.1.5:8000/api/"
+        val url = "http://192.168.1.4:8000/api/"
 
         val retrofit = Retrofit.Builder()
             .baseUrl(url)
@@ -1589,7 +1589,7 @@ class PreviewDialogFragment: DialogFragment() {
     }
 
     private fun updateDataLembur(lemburId: Int,TiTanggal : TextInputLayout,TIMasuk : TextInputLayout,TiKeluar:TextInputLayout,TIkegiatan:TextInputLayout) {
-        val url = "http://192.168.1.5:8000/api/"
+        val url = "http://192.168.1.4:8000/api/"
 
         val retrofit = Retrofit.Builder()
             .baseUrl(url)
@@ -1639,7 +1639,7 @@ class PreviewDialogFragment: DialogFragment() {
         dismiss()
     }
     private fun updateDataIzin(izinId: Int,TITanggal:TextInputLayout,acIzin:AutoCompleteTextView,TIAlasan:TextInputLayout) {
-        val url = "http://192.168.1.5:8000/api/"
+        val url = "http://192.168.1.4:8000/api/"
 
         val retrofit = Retrofit.Builder()
             .baseUrl(url)
@@ -1856,7 +1856,7 @@ class PreviewDialogFragment: DialogFragment() {
         }
         // Assuming you have an ID associated with the item
         // Call your API to update the status
-        val url = "http://192.168.1.5:8000/api/"
+        val url = "http://192.168.1.4:8000/api/"
         // Make a network request using Retrofit
         val retrofit = Retrofit.Builder()
             .baseUrl(url)

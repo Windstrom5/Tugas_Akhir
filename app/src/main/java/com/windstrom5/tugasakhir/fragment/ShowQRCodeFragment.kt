@@ -73,7 +73,7 @@ class ShowQRCodeFragment : Fragment() {
             val logoUrl = if (perusahaan.logo == "null") {
                 null // Will load from drawable
             } else {
-                "http://192.168.1.5:8000/api/Perusahaan/decryptLogo/${perusahaan.id}"
+                "http://192.168.1.4:8000/api/Perusahaan/decryptLogo/${perusahaan.id}"
             }
 
             if (logoUrl == null) {

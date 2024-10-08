@@ -193,7 +193,7 @@ class RegisterActivity : AppCompatActivity() {
                 secretKey,
                 autoCompleteTextView.text.toString()
             )
-            val url = "http://192.168.1.5:8000/api/"
+            val url = "http://192.168.1.4:8000/api/"
             val retrofit = Retrofit.Builder()
                 .baseUrl(url)
                 .addConverterFactory(GsonConverterFactory.create())
@@ -363,7 +363,7 @@ class RegisterActivity : AppCompatActivity() {
 
     // Function to fetch secret keys (already hashed with MD5) from the API
     private fun getSecretKeysFromApi(): List<String> {
-        val apiUrl = "http://192.168.1.5:8000/api/GetPerusahaan"
+        val apiUrl = "http://192.168.1.4:8000/api/GetPerusahaan"
         val secretKeysList = mutableListOf<String>()
 
         val jsonArrayRequest = JsonArrayRequest(Request.Method.GET, apiUrl, null,
@@ -453,7 +453,7 @@ class RegisterActivity : AppCompatActivity() {
     }
 
 //    private fun makeApiRequest(secretKey: String) {
-//        val url = "http://192.168.1.5:8000/api/"
+//        val url = "http://192.168.1.4:8000/api/"
 //
 //        val retrofit = Retrofit.Builder()
 //            .baseUrl(url)
