@@ -1550,7 +1550,7 @@ class LaporanActivity : AppCompatActivity() {
     }
 
     private fun fetchDataDinasPerusahaan(namaPerusahaan: String) {
-        val url = "http://192.168.1.4:8000/api/"
+        val url = "https://selected-jaguar-presently.ngrok-free.app/api/"
         val retrofit = Retrofit.Builder()
             .baseUrl(url)
             .addConverterFactory(GsonConverterFactory.create())
@@ -1601,7 +1601,7 @@ class LaporanActivity : AppCompatActivity() {
     }
 
     private fun fetchDataPekerja(namaPerusahaan: String) {
-        val url = "http://192.168.1.4:8000/api/"
+        val url = "https://selected-jaguar-presently.ngrok-free.app/api/"
         Log.d("FetchDataError", "Nama: ${namaPerusahaan}")
         val retrofit = Retrofit.Builder()
             .baseUrl(url)
@@ -1667,7 +1667,7 @@ class LaporanActivity : AppCompatActivity() {
     }
 
     private fun fetchDataLemburPerusahaan(namaPerusahaan: String) {
-        val url = "http://192.168.1.4:8000/api/"
+        val url = "https://selected-jaguar-presently.ngrok-free.app/api/"
         val retrofit = Retrofit.Builder()
             .baseUrl(url)
             .addConverterFactory(GsonConverterFactory.create())
@@ -1718,7 +1718,7 @@ class LaporanActivity : AppCompatActivity() {
     }
 
     private fun fetchDataSesiPerusahaan(perusahaanId: Int) {
-        val url = "http://192.168.1.4:8000/api/"
+        val url = "https://selected-jaguar-presently.ngrok-free.app/api/"
         val retrofit = Retrofit.Builder()
             .baseUrl(url)
             .addConverterFactory(GsonConverterFactory.create())
@@ -1769,7 +1769,7 @@ class LaporanActivity : AppCompatActivity() {
     }
 
     private fun fetchDataIzinPerusahaan(namaPerusahaan: String) {
-        val url = "http://192.168.1.4:8000/api/"
+        val url = "https://selected-jaguar-presently.ngrok-free.app/api/"
         val retrofit = Retrofit.Builder()
             .baseUrl(url)
             .addConverterFactory(GsonConverterFactory.create())
@@ -1819,7 +1819,7 @@ class LaporanActivity : AppCompatActivity() {
     }
 
     private fun fetchDataPresensiPerusahaan(namaPerusahaan: String) {
-        val url = "http://192.168.1.4:8000/api/"
+        val url = "https://selected-jaguar-presently.ngrok-free.app/api/"
         val retrofit = Retrofit.Builder()
             .baseUrl(url)
             .addConverterFactory(GsonConverterFactory.create())

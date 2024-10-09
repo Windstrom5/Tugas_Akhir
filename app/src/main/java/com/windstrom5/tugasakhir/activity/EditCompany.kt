@@ -192,7 +192,7 @@ class EditCompany : AppCompatActivity() {
     }
 
     private fun updateData(Id: Int) {
-        val url = "http://192.168.1.4:8000/api/"
+        val url = "https://selected-jaguar-presently.ngrok-free.app/api/"
         val sharedPreferencesManager = SharedPreferencesManager(this@EditCompany)
         val retrofit = Retrofit.Builder()
             .baseUrl(url)
@@ -403,7 +403,7 @@ class EditCompany : AppCompatActivity() {
                 }
                 if(logo != null){
                     val imageUrl =
-                        "http://192.168.1.4:8000/api/Perusahaan/decryptLogo/${perusahaan?.id}"
+                        "https://selected-jaguar-presently.ngrok-free.app/api/Perusahaan/decryptLogo/${perusahaan?.id}"
                     val imageRequest = ImageRequest(
                         imageUrl,
                         { response ->
@@ -458,7 +458,7 @@ class EditCompany : AppCompatActivity() {
                     latitude = it.getDouble("latitude")
                     longitude = it.getDouble("longitude")
                     val imageUrl =
-                        "http://192.168.1.4:8000/api/Perusahaan/decryptLogo/${perusahaan?.id}" // Replace with your Laravel image URL
+                        "https://selected-jaguar-presently.ngrok-free.app/api/Perusahaan/decryptLogo/${perusahaan?.id}" // Replace with your Laravel image URL
                     textNama.setText(it.getString("namaPerusahaan"))
                     textJamMasuk.setText(it.getString("openhour"))
                     textJamKeluar.setText(it.getString("closehour"))

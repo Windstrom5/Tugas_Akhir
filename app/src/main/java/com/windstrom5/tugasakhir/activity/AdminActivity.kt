@@ -229,9 +229,9 @@ class AdminActivity : AppCompatActivity() {
 
     private fun fetchDataFromApi(id: Int, jenis: String, id_presensi: Int?) {
         val url = if (id_presensi == null) {
-            "http://192.168.1.4:8000/api/getData?id=$id&jenis=$jenis"
+            "https://selected-jaguar-presently.ngrok-free.app/api/getData?id=$id&jenis=$jenis"
         } else {
-            "http://192.168.1.4:8000/api/getData?id=$id&jenis=$jenis&id_presensi=$id_presensi"
+            "https://selected-jaguar-presently.ngrok-free.app/api/getData?id=$id&jenis=$jenis&id_presensi=$id_presensi"
         }
 
         val jsonObjectRequest = JsonObjectRequest(
@@ -280,7 +280,7 @@ class AdminActivity : AppCompatActivity() {
                         )
                         nama.setText(user.getString("nama"))
                         val url =
-                            "http://192.168.1.4:8000/api/Admin/decryptProfile/${admin?.id}" // Replace with your actual URL
+                            "https://selected-jaguar-presently.ngrok-free.app/api/Admin/decryptProfile/${admin?.id}" // Replace with your actual URL
 
                         val imageRequest = ImageRequest(
                             url,
@@ -368,7 +368,7 @@ class AdminActivity : AppCompatActivity() {
             while (isFetching) {
                 try {
                     Log.d("Pinged", "Attempting to ping")
-                    val url = URL("http://192.168.1.4:8000") // Replace with your actual endpoint
+                    val url = URL("https://selected-jaguar-presently.ngrok-free.app") // Replace with your actual endpoint
                     val connection = url.openConnection() as HttpURLConnection
                     connection.requestMethod = "GET"
                     connection.connectTimeout = 5000
@@ -964,7 +964,7 @@ class AdminActivity : AppCompatActivity() {
                 Log.d("ApiResponse",perusahaan.toString())
             }
             val url =
-                "http://192.168.1.4:8000/api/Admin/decryptProfile/${admin?.id}" // Replace with your actual URL
+                "https://selected-jaguar-presently.ngrok-free.app/api/Admin/decryptProfile/${admin?.id}" // Replace with your actual URL
 
             val imageRequest = ImageRequest(
                 url,

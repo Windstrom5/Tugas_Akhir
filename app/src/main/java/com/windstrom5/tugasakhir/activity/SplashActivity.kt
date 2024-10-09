@@ -83,9 +83,9 @@ class SplashActivity : AppCompatActivity() {
     @SuppressLint("SimpleDateFormat")
     private fun fetchDataFromApi(id: Int, jenis: String, id_presensi: Int?) {
         val url = if (id_presensi == null) {
-            "http://192.168.1.4:8000/api/getData?id=$id&jenis=$jenis"
+            "https://selected-jaguar-presently.ngrok-free.app/api/getData?id=$id&jenis=$jenis"
         } else {
-            "http://192.168.1.4:8000/api/getData?id=$id&jenis=$jenis&id_presensi=$id_presensi"
+            "https://selected-jaguar-presently.ngrok-free.app/api/getData?id=$id&jenis=$jenis&id_presensi=$id_presensi"
         }
 
         val jsonObjectRequest = JsonObjectRequest(
@@ -285,7 +285,7 @@ class SplashActivity : AppCompatActivity() {
                 .into(logoImageView)
         } else {
             val url =
-                "http://192.168.1.4:8000/api/Perusahaan/decryptLogo/${perusahaan?.id}" // Replace with your actual URL
+                "https://selected-jaguar-presently.ngrok-free.app/api/Perusahaan/decryptLogo/${perusahaan?.id}" // Replace with your actual URL
 
             val imageRequest = ImageRequest(
                 url,

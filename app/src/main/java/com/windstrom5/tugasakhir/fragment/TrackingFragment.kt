@@ -1,5 +1,8 @@
 package com.windstrom5.tugasakhir.fragment
 
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -7,6 +10,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.preference.PreferenceManager
 import com.android.volley.Request
@@ -70,7 +74,17 @@ class TrackingFragment : Fragment() {
         mapView = view.findViewById(R.id.mapView)
         getBundle()
         initializeMap()
+        if (isInternetAvailable()) {
+            perusahaan?.let {
+                fetchDataFromApi(it)
+                focusOnPerusahaanLocation(it)
+            }
+        } else {
+            // Show Toast if no internet connection
+            Toast.makeText(requireContext(), "No internet connection. Please check your connection.", Toast.LENGTH_LONG).show()
+        }
         requestQueue = Volley.newRequestQueue(requireContext())
+
         perusahaan?.let {
             fetchDataFromApi(it)
             focusOnPerusahaanLocation(it)
@@ -88,8 +102,19 @@ class TrackingFragment : Fragment() {
 //        }
         return view
     }
+    private fun isInternetAvailable(): Boolean {
+        val connectivityManager = requireContext().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val network = connectivityManager.activeNetwork ?: return false
+        val activeNetwork = connectivityManager.getNetworkCapabilities(network) ?: return false
+        return when {
+            activeNetwork.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> true
+            activeNetwork.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> true
+            activeNetwork.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> true
+            else -> false
+        }
+    }
     private fun fetchDataFromApi(perusahaan: Perusahaan) {
-        val url = "http://192.168.1.4:8000/api/"
+        val url = "https://selected-jaguar-presently.ngrok-free.app/api/"
         val retrofit = Retrofit.Builder()
             .baseUrl(url)
             .addConverterFactory(GsonConverterFactory.create())
@@ -149,7 +174,7 @@ class TrackingFragment : Fragment() {
         }
     }
 //    private fun getPekerja(perusahaan: Perusahaan) {
-//        val apiUrl = "http://192.168.1.4:8000/api/getPekerja/${perusahaan.nama}"
+//        val apiUrl = "https://selected-jaguar-presently.ngrok-free.app/api/getPekerja/${perusahaan.nama}"
 //
 //        val jsonObjectRequest = JsonObjectRequest(
 //            Request.Method.GET, apiUrl, null,
@@ -270,7 +295,7 @@ class TrackingFragment : Fragment() {
     }
     private fun updateLocation(perusahaan: Perusahaan) {
         // Send request to server to get user's locations
-        val serverUrl = "http://192.168.1.4:8000/api/Presensi/getLocation/${perusahaan.nama}"
+        val serverUrl = "https://selected-jaguar-presently.ngrok-free.app/api/Presensi/getLocation/${perusahaan.nama}"
         val request = JsonArrayRequest(
             Request.Method.GET, serverUrl, null,
             { response ->

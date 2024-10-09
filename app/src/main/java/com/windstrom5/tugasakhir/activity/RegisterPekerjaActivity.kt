@@ -155,7 +155,7 @@ class RegisterPekerjaActivity : AppCompatActivity() {
                 )
             } else if (Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
                 setLoading(true)
-                val url = "http://192.168.1.4:8000/api/"
+                val url = "https://selected-jaguar-presently.ngrok-free.app/api/"
                 val retrofit = Retrofit.Builder()
                     .baseUrl(url)
                     .addConverterFactory(GsonConverterFactory.create())
@@ -235,7 +235,7 @@ class RegisterPekerjaActivity : AppCompatActivity() {
     }
 
     private fun saveData(perusahaan: Perusahaan) {
-        val url = "http://192.168.1.4:8000/api/"
+        val url = "https://selected-jaguar-presently.ngrok-free.app/api/"
         val retrofit = Retrofit.Builder()
             .baseUrl(url)
             .addConverterFactory(GsonConverterFactory.create())
@@ -448,7 +448,7 @@ class RegisterPekerjaActivity : AppCompatActivity() {
                 perusahaan = it.getParcelable("perusahaan")
                 admin = it.getParcelable("user")
                 val imageUrl =
-                    "http://192.168.1.4:8000/api/Perusahaan/decryptLogo/${perusahaan?.id}" // Replace with your Laravel image URL
+                    "https://selected-jaguar-presently.ngrok-free.app/api/Perusahaan/decryptLogo/${perusahaan?.id}" // Replace with your Laravel image URL
                 val profileImageView = binding.logo
                 Glide.with(this)
                     .load(imageUrl)

@@ -154,7 +154,7 @@ class AddDinasFragment : Fragment() {
         }
     }
     private fun saveDataDinas(pekerja: Pekerja,perusahaan: Perusahaan){
-        val url = "http://192.168.1.4:8000/api/"
+        val url = "https://selected-jaguar-presently.ngrok-free.app/api/"
 
         val retrofit = Retrofit.Builder()
             .baseUrl(url)

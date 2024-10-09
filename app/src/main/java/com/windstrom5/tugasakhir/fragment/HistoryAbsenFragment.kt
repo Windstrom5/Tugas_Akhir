@@ -94,7 +94,7 @@ class HistoryAbsenFragment : Fragment() {
     }
 
     private fun fetchDataPekerjaFromApi(namaPerusahaan: String,nama_pekerja: String) {
-        val url = "http://192.168.1.4:8000/api/"
+        val url = "https://selected-jaguar-presently.ngrok-free.app/api/"
         val retrofit = Retrofit.Builder()
             .baseUrl(url)
             .addConverterFactory(GsonConverterFactory.create())
@@ -183,7 +183,7 @@ class HistoryAbsenFragment : Fragment() {
     }
 
     private fun fetchDataPerusahaanFromApi(namaPerusahaan: String) {
-        val url = "http://192.168.1.4:8000/api/"
+        val url = "https://selected-jaguar-presently.ngrok-free.app/api/"
         val retrofit = Retrofit.Builder()
             .baseUrl(url)
             .addConverterFactory(GsonConverterFactory.create())
