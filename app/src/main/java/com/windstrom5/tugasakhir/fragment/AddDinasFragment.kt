@@ -11,6 +11,8 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.drawable.Drawable
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
@@ -139,7 +141,13 @@ class AddDinasFragment : Fragment() {
             Log.d("clicked","click")
             save.startAnimation()
             if(isAllFieldsFilled()){
-                perusahaan?.let { it1 -> pekerja?.let { it2 -> saveDataDinas(it2, it1) } }
+//                if (isInternetAvailable()) {
+                    perusahaan?.let { it1 -> pekerja?.let { it2 -> saveDataDinas(it2, it1) } }
+//                } else {
+//                    // Show Toast if no internet connection
+//                    Toast.makeText(requireContext(), "No internet connection. Please check your connection.", Toast.LENGTH_LONG).show()
+//                    save.revertAnimation()
+//                }
             }else{
                 save.revertAnimation()
             }
@@ -364,7 +372,21 @@ class AddDinasFragment : Fragment() {
         Log.d("ProvinsiList",provinsiDataList.toString())
         return provinsiDataList
     }
-
+//private suspend fun isInternetAvailable(): Boolean {
+//    return withContext(Dispatchers.IO) {
+//        try {
+//            val url = URL("https://selected-jaguar-presently.ngrok-free.app") // Replace with your actual endpoint
+//            val connection = url.openConnection() as HttpURLConnection
+//            connection.requestMethod = "HEAD" // Use HEAD to only get headers
+//            connection.connectTimeout = 3000 // Timeout in milliseconds
+//            connection.connect()
+//            val responseCode = connection.responseCode
+//            responseCode in 200..399 // Check if the response code indicates success (200-399)
+//        } catch (e: Exception) {
+//            false // If an exception occurs, consider it as no internet
+//        }
+//    }
+//}
     private fun combineAndFormatData(kotaList: List<JSONObject>, provinsiList: List<JSONObject>): List<String> {
         val combinedDataList = mutableListOf<String>()
         for (kotaObject in kotaList) {

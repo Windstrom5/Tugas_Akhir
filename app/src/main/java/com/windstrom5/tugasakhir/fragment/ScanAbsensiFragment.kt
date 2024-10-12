@@ -6,6 +6,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.LocationManager
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -170,9 +172,30 @@ class ScanAbsensiFragment : Fragment() {
             showHolidayAnimation()
         } else {
             Log.d("ScanAbsensiFragment", "Not a holiday - checking camera permission")
-            checkCameraPermissionAndStartScanner()
+//            if (isInternetAvailable()) {
+                checkCameraPermissionAndStartScanner()
+//            } else {
+//                // Show Toast if no internet connection
+//                Toast.makeText(requireContext(), "No internet connection. Please check your connection.", Toast.LENGTH_LONG).show()
+//            }
+
         }
     }
+//private suspend fun isInternetAvailable(): Boolean {
+//    return withContext(Dispatchers.IO) {
+//        try {
+//            val url = URL("https://selected-jaguar-presently.ngrok-free.app") // Replace with your actual endpoint
+//            val connection = url.openConnection() as HttpURLConnection
+//            connection.requestMethod = "HEAD" // Use HEAD to only get headers
+//            connection.connectTimeout = 3000 // Timeout in milliseconds
+//            connection.connect()
+//            val responseCode = connection.responseCode
+//            responseCode in 200..399 // Check if the response code indicates success (200-399)
+//        } catch (e: Exception) {
+//            false // If an exception occurs, consider it as no internet
+//        }
+//    }
+//}
     private fun checkCameraPermissionAndStartScanner() {
         // Check if the camera permission is already granted, if not request it
         if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA)

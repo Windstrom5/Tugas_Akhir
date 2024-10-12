@@ -265,7 +265,15 @@ class UserActivity : AppCompatActivity() {
                     val responseCode = connection.responseCode
                     Log.d("Pinged", "Response Code: $responseCode")
 
-                    if (responseCode == HttpURLConnection.HTTP_OK) {
+                    // Handle when server is unreachable or ngrok tunnel not found (404 or ERR_NGROK_3200)
+                    if (responseCode == HttpURLConnection.HTTP_NOT_FOUND) {
+                        Log.e("Pinged", "Error: Server offline or ngrok tunnel not found (404)")
+                        withContext(Dispatchers.Main) {
+                            signalStrengthView.signalLevel = 0
+                            pingTextView.text = "Offline - Server not found"
+                            signalStrengthView.color = Color.RED
+                        }
+                    } else if (responseCode == HttpURLConnection.HTTP_OK) {
                         val response = StringBuilder()
                         val reader = BufferedReader(InputStreamReader(connection.inputStream))
 
@@ -291,6 +299,11 @@ class UserActivity : AppCompatActivity() {
                         }
                     } else {
                         Log.e("Pinged", "Error: Received response code $responseCode")
+                        withContext(Dispatchers.Main) {
+                            signalStrengthView.signalLevel = 0
+                            pingTextView.text = "Offline - Server error"
+                            signalStrengthView.color = Color.RED
+                        }
                     }
 
                     connection.disconnect()
@@ -300,7 +313,7 @@ class UserActivity : AppCompatActivity() {
                     withContext(Dispatchers.Main) {
                         // Handle UI updates or notifications for offline state
                         signalStrengthView.signalLevel = 0 // Set signal strength to 0 or indicate offline
-                        pingTextView.text = "Offline" // Update UI to indicate offline status
+                        pingTextView.text = "Offline - No Connection" // Update UI to indicate offline status
                         signalStrengthView.color = Color.RED
                     }
                 } catch (e: Exception) {
@@ -311,6 +324,7 @@ class UserActivity : AppCompatActivity() {
             }
         }
     }
+
 
 
     private fun fetchNewsData() {

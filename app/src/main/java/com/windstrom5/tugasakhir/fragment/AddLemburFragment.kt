@@ -25,6 +25,8 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.drawable.Drawable
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.net.Uri
 import android.provider.MediaStore
 import android.text.Editable
@@ -47,6 +49,8 @@ import com.wdullaer.materialdatetimepicker.date.DatePickerDialog
 import com.windstrom5.tugasakhir.activity.RegisterActivity
 import com.windstrom5.tugasakhir.connection.ApiResponse
 import com.windstrom5.tugasakhir.connection.ApiService
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.MediaType
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
@@ -61,6 +65,8 @@ import www.sanju.motiontoast.MotionToast
 import www.sanju.motiontoast.MotionToastStyle
 import java.io.File
 import java.io.InputStream
+import java.net.HttpURLConnection
+import java.net.URL
 import java.sql.Time
 import java.text.SimpleDateFormat
 import java.util.*
@@ -134,6 +140,12 @@ class AddLemburFragment : Fragment() {
             save.startAnimation()
             if(isAllFieldsFilled()){
                 pekerja?.let { it1 -> perusahaan?.let { it2 -> saveDataLembur(it1, it2) } }
+//                if (isInternetAvailable()) {
+//                } else {
+//                    // Show Toast if no internet connection
+//                    Toast.makeText(requireContext(), "No internet connection. Please check your connection.", Toast.LENGTH_LONG).show()
+//                    save.revertAnimation()
+//                }
             }else{
                 save.revertAnimation()
                 MotionToast.createToast(requireActivity(), "Error",
@@ -147,7 +159,21 @@ class AddLemburFragment : Fragment() {
 
         return view
     }
-
+//private suspend fun isInternetAvailable(): Boolean {
+//    return withContext(Dispatchers.IO) {
+//        try {
+//            val url = URL("https://selected-jaguar-presently.ngrok-free.app") // Replace with your actual endpoint
+//            val connection = url.openConnection() as HttpURLConnection
+//            connection.requestMethod = "HEAD" // Use HEAD to only get headers
+//            connection.connectTimeout = 3000 // Timeout in milliseconds
+//            connection.connect()
+//            val responseCode = connection.responseCode
+//            responseCode in 200..399 // Check if the response code indicates success (200-399)
+//        } catch (e: Exception) {
+//            false // If an exception occurs, consider it as no internet
+//        }
+//    }
+//}
     private fun setLoading(isLoading: Boolean) {
         val loadingLayout = activity?.findViewById<LinearLayout>(R.id.layout_loading)
         if (isLoading) {

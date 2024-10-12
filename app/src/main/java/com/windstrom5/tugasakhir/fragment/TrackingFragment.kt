@@ -74,15 +74,15 @@ class TrackingFragment : Fragment() {
         mapView = view.findViewById(R.id.mapView)
         getBundle()
         initializeMap()
-        if (isInternetAvailable()) {
+//        if (isInternetAvailable()) {
             perusahaan?.let {
                 fetchDataFromApi(it)
                 focusOnPerusahaanLocation(it)
             }
-        } else {
-            // Show Toast if no internet connection
-            Toast.makeText(requireContext(), "No internet connection. Please check your connection.", Toast.LENGTH_LONG).show()
-        }
+//        } else {
+//            // Show Toast if no internet connection
+//            Toast.makeText(requireContext(), "No internet connection. Please check your connection.", Toast.LENGTH_LONG).show()
+//        }
         requestQueue = Volley.newRequestQueue(requireContext())
 
         perusahaan?.let {
@@ -102,17 +102,21 @@ class TrackingFragment : Fragment() {
 //        }
         return view
     }
-    private fun isInternetAvailable(): Boolean {
-        val connectivityManager = requireContext().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val network = connectivityManager.activeNetwork ?: return false
-        val activeNetwork = connectivityManager.getNetworkCapabilities(network) ?: return false
-        return when {
-            activeNetwork.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> true
-            activeNetwork.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> true
-            activeNetwork.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> true
-            else -> false
-        }
-    }
+//private suspend fun isInternetAvailable(): Boolean {
+//    return withContext(Dispatchers.IO) {
+//        try {
+//            val url = URL("https://selected-jaguar-presently.ngrok-free.app") // Replace with your actual endpoint
+//            val connection = url.openConnection() as HttpURLConnection
+//            connection.requestMethod = "HEAD" // Use HEAD to only get headers
+//            connection.connectTimeout = 3000 // Timeout in milliseconds
+//            connection.connect()
+//            val responseCode = connection.responseCode
+//            responseCode in 200..399 // Check if the response code indicates success (200-399)
+//        } catch (e: Exception) {
+//            false // If an exception occurs, consider it as no internet
+//        }
+//    }
+//}
     private fun fetchDataFromApi(perusahaan: Perusahaan) {
         val url = "https://selected-jaguar-presently.ngrok-free.app/api/"
         val retrofit = Retrofit.Builder()
