@@ -19,16 +19,15 @@ import androidx.cardview.widget.CardView
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import br.com.simplepass.loading_button_lib.customViews.CircularProgressButton
+import br.com.simplepass.loadingbutton.customViews.CircularProgressButton
 import com.android.volley.Request
 import com.android.volley.toolbox.ImageRequest
 import com.android.volley.toolbox.JsonArrayRequest
 import com.android.volley.toolbox.Volley
-import com.github.aachartmodel.aainfographics.aachartcreator.AAChartModel
-import com.github.aachartmodel.aainfographics.aachartcreator.AAChartType
-import com.github.aachartmodel.aainfographics.aachartcreator.AAChartView
-import com.github.aachartmodel.aainfographics.aachartcreator.AASeriesElement
-import com.github.aachartmodel.aainfographics.aachartcreator.aa_toAAOptions
+import com.github.AAChartModel.AAChartCore.AAChartCreator.AAChartView
+import com.github.AAChartModel.AAChartCore.AAChartCreator.AAChartModel
+import com.github.AAChartModel.AAChartCore.AAChartCreator.AASeriesElement
+import com.github.AAChartModel.AAChartCore.AAChartEnum.AAChartType
 import com.github.mikephil.charting.data.Entry
 import com.saadahmedev.popupdialog.PopupDialog
 import com.windstrom5.tugasakhir.R
@@ -168,7 +167,8 @@ class LaporanActivity : AppCompatActivity() {
     private fun processDinasData(
         selectedData: String,
         selectedBulan: String,
-        selectedTahun: String
+        selectedTahun: String,
+        selectedPegawai: String?
     ): List<Entry> {
         val monthMapping = mapOf(
             "January" to 1, "February" to 2, "March" to 3, "April" to 4,
@@ -179,55 +179,49 @@ class LaporanActivity : AppCompatActivity() {
         val selectedMonth = monthMapping[selectedBulan]
         val selectedYear = selectedTahun.toIntOrNull()
 
-        // Filter dinas items by selected month and year
+        // Filter dinas items by selected month, year, and employee if provided
+        val employeeId = if (selectedPegawai?.isNotEmpty() == true) {
+            dinasItemList.find { it.nama_pekerja == selectedPegawai }?.id_pekerja
+        } else {
+            null // No specific employee selected
+        }
+
         val filteredDinasItems = dinasItemList.filter { dinas ->
             val calendar = Calendar.getInstance().apply { time = dinas.tanggal_berangkat }
             val dinasMonth = calendar.get(Calendar.MONTH) + 1
             val dinasYear = calendar.get(Calendar.YEAR)
+            val isMonthMatch = selectedMonth == null || selectedMonth == dinasMonth
+            val isYearMatch = selectedYear == null || selectedYear == dinasYear
+            val isEmployeeMatch = employeeId == null || dinas.id_pekerja == employeeId
 
-            (selectedMonth == null || selectedMonth == dinasMonth) &&
-                    (selectedYear == null || selectedYear == dinasYear)
+            isMonthMatch && isYearMatch && isEmployeeMatch
         }
 
         return when (selectedData) {
             "total dinas" -> {
-                val totalEntries = filteredDinasItems.groupBy { it.id_pekerja }
+                filteredDinasItems.groupBy { it.id_pekerja }
                     .map { (id, dinasItems) ->
                         val totalDinas = dinasItems.size.toFloat()
                         Entry(id?.toFloat() ?: 0f, totalDinas)
                     }
-                totalEntries
             }
-
             "rata-rata durasi dinas" -> {
-                val avgEntries = filteredDinasItems.groupBy { it.id_pekerja }
+                filteredDinasItems.groupBy { it.id_pekerja }
                     .map { (id, dinasItems) ->
                         val totalDurasi = dinasItems.sumOf { dinas ->
-                            // Calculate duration in hours as Double
-                            val durasi =
-                                (dinas.tanggal_pulang.time - dinas.tanggal_berangkat.time) / (1000 * 60 * 60).toDouble()
-                            durasi
+                            (dinas.tanggal_pulang.time - dinas.tanggal_berangkat.time) / (1000 * 60 * 60).toDouble()
                         }
-                        val avgDurasi =
-                            if (dinasItems.isNotEmpty()) totalDurasi / dinasItems.size else 0.0
-                        // Return Entry with Float values
+                        val avgDurasi = if (dinasItems.isNotEmpty()) totalDurasi / dinasItems.size else 0.0
                         Entry(id?.toFloat() ?: 0f, avgDurasi.toFloat())
                     }
-                avgEntries
             }
-
             "distribusi dinas" -> {
-                val distribusiEntries = filteredDinasItems.groupBy { it.tujuan }
+                filteredDinasItems.groupBy { it.tujuan }
                     .map { (tujuan, dinasItems) ->
                         val totalPerTujuan = dinasItems.size.toFloat()
-                        Entry(
-                            tujuan.hashCode().toFloat(),
-                            totalPerTujuan
-                        )  // Using tujuan's hashcode for unique representation
+                        Entry(tujuan.hashCode().toFloat(), totalPerTujuan)
                     }
-                distribusiEntries
             }
-
             else -> emptyList()
         }
     }
@@ -235,7 +229,8 @@ class LaporanActivity : AppCompatActivity() {
     private fun processIzinData(
         selectedData: String,
         selectedBulan: String,
-        selectedTahun: String
+        selectedTahun: String,
+        selectedPegawai: String?
     ): List<Entry> {
         val monthMapping = mapOf(
             "January" to 1, "February" to 2, "March" to 3, "April" to 4,
@@ -246,63 +241,63 @@ class LaporanActivity : AppCompatActivity() {
         val selectedMonth = monthMapping[selectedBulan]
         val selectedYear = selectedTahun.toIntOrNull()
 
-        // Filter izin items by selected month and year
+        // Cari ID pegawai yang dipilih jika disediakan
+        val employeeId = if (selectedPegawai?.isNotEmpty() == true) {
+            izinItemList.find { it.nama_pekerja == selectedPegawai }?.id_pekerja
+        } else {
+            null // Jika tidak ada pegawai yang dipilih
+        }
+
+        // Filter izin items berdasarkan bulan, tahun, dan pegawai jika disediakan
         val filteredIzinItems = izinItemList.filter { izin ->
             val calendar = Calendar.getInstance().apply { time = izin.tanggal }
             val izinMonth = calendar.get(Calendar.MONTH) + 1
             val izinYear = calendar.get(Calendar.YEAR)
+            val isMonthMatch = selectedMonth == null || selectedMonth == izinMonth
+            val isYearMatch = selectedYear == null || selectedYear == izinYear
+            val isEmployeeMatch = employeeId == null || izin.id_pekerja == employeeId
 
-            (selectedMonth == null || selectedMonth == izinMonth) &&
-                    (selectedYear == null || selectedYear == izinYear)
+            isMonthMatch && isYearMatch && isEmployeeMatch
         }
 
         return when (selectedData) {
             "total izin" -> {
-                val totalEntries = filteredIzinItems.groupBy { it.id_pekerja }
+                filteredIzinItems.groupBy { it.id_pekerja }
                     .map { (id, izinItems) ->
                         val totalIzin = izinItems.size.toFloat()
                         Entry(id?.toFloat() ?: 0f, totalIzin)
                     }
-                totalEntries
             }
 
             "rata-rata izin" -> {
-                val avgEntries = filteredIzinItems.groupBy { it.id_pekerja }
+                filteredIzinItems.groupBy { it.id_pekerja }
                     .map { (id, izinItems) ->
                         val totalIzin = izinItems.size.toFloat()
                         val avgIzin = if (izinItems.isNotEmpty()) totalIzin / izinItems.size else 0f
                         Entry(id?.toFloat() ?: 0f, avgIzin)
                     }
-                avgEntries
             }
 
             "jenis izin" -> {
-                // Log the filtered izin items
+                // Log filtered izin items
                 Log.d("izin", filteredIzinItems.toString())
 
-                // Group by kategori and create the entries
+                // Group by kategori and create entries
                 val distribusiEntries = filteredIzinItems.groupBy { it.kategori }
                     .map { (kategori, izinItems) ->
-                        // Count how many times each 'kategori' was picked
                         val totalPerKategori = izinItems.size.toFloat()
-
-                        // Use the kategori for the X-axis and total count for the Y-axis
-                        Entry(
-                            kategori.hashCode().toFloat(),
-                            totalPerKategori
-                        )  // Keeping hashCode for entry but you can store kategori as a label
+                        Entry(kategori.hashCode().toFloat(), totalPerKategori)
                     }
 
-                // Log the distribusi entries for debugging
+                // Log distribusi entries for debugging
                 Log.d("Izin Test", distribusiEntries.toString())
-
-                // Return the generated entries
                 distribusiEntries
             }
 
             else -> emptyList()
         }
     }
+
 
     private fun fetchHolidayData() {
         val currentYear = Calendar.getInstance().get(Calendar.YEAR)
@@ -476,8 +471,16 @@ class LaporanActivity : AppCompatActivity() {
                 selectedPegawai
             )
 
-            "dinas" -> processDinasData(selectedData, selectedBulan, selectedTahun)
-            "izin" -> processIzinData(selectedData, selectedBulan, selectedTahun)
+            "dinas" -> processDinasData(
+                selectedData,
+                selectedBulan,
+                selectedTahun,
+                selectedPegawai)
+            "izin" -> processIzinData(
+                selectedData,
+                selectedBulan,
+                selectedTahun,
+                selectedPegawai)
             "presensi" -> processPresensiData(
                 selectedData,
                 selectedBulan,
@@ -1455,46 +1458,46 @@ class LaporanActivity : AppCompatActivity() {
         }
     }
 
-    private fun generateDinasChart(
-        selectedJenis: String,
-        selectedData: String
-    ) {
-        val selectedBulan = bulan.text.toString()
-        val selectedTahun = tahun.text.toString()
-        val selectedPegawai = pegawai.text.toString()
-        val selectedChartType = chartList.text.toString()
-
-        val entries = processDataForChart(
-            selectedJenis,
-            selectedData,
-            selectedBulan,
-            selectedTahun,
-            selectedPegawai
-        )
-
-        // Prepare categories and data arrays
-        val categories = entries.map { entry ->
-            val calendar = Calendar.getInstance()
-            calendar.timeInMillis = entry.x.toLong()
-            calendar.getDisplayName(Calendar.MONTH, Calendar.LONG, Locale.getDefault())
-        }.toTypedArray()
-
-        val data = entries.map { it.y }.toTypedArray()
-
-        val aaChartModel = AAChartModel()
-            .chartType(AAChartType.valueOf(selectedChartType.replace(" ", "")))
-            .title(generateChartTitle(selectedJenis, selectedData, selectedBulan, selectedTahun))
-            .categories(categories)
-            .series(
-                arrayOf(
-                    AASeriesElement()
-                        .name(selectedData)
-                        .data(arrayOf(data)) // Wrap data in arrayOf
-                )
-            )
-
-        chart.aa_drawChartWithChartModel(aaChartModel)
-    }
+//    private fun generateDinasChart(
+//        selectedJenis: String,
+//        selectedData: String
+//    ) {
+//        val selectedBulan = bulan.text.toString()
+//        val selectedTahun = tahun.text.toString()
+//        val selectedPegawai = pegawai.text.toString()
+//        val selectedChartType = chartList.text.toString()
+//
+//        val entries = processDataForChart(
+//            selectedJenis,
+//            selectedData,
+//            selectedBulan,
+//            selectedTahun,
+//            selectedPegawai
+//        )
+//
+//        // Prepare categories and data arrays
+//        val categories = entries.map { entry ->
+//            val calendar = Calendar.getInstance()
+//            calendar.timeInMillis = entry.x.toLong()
+//            calendar.getDisplayName(Calendar.MONTH, Calendar.LONG, Locale.getDefault())
+//        }.toTypedArray()
+//
+//        val data = entries.map { it.y }.toTypedArray()
+//
+//        val aaChartModel = AAChartModel()
+//            .chartType(AAChartType.valueOf(selectedChartType.replace(" ", "")))
+//            .title(generateChartTitle(selectedJenis, selectedData, selectedBulan, selectedTahun))
+//            .categories(categories)
+//            .series(
+//                arrayOf(
+//                    AASeriesElement()
+//                        .name(selectedData)
+//                        .data(arrayOf(data)) // Wrap data in arrayOf
+//                )
+//            )
+//
+//        chart.aa_drawChartWithChartModel(aaChartModel)
+//    }
 
     private fun generateChartTitle(
         selectedJenis: String,

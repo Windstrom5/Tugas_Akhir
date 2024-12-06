@@ -203,7 +203,7 @@
                                 </LinearLayout>
 
                             </androidx.cardview.widget.CardView>
-                            <br.com.simplepass.loading_button_lib.customViews.CircularProgressButton
+                            <br.com.simplepass.loadingbutton.customViews.CircularProgressButton
                                 android:id="@+id/submitButton"
                                 android:layout_width="match_parent"
                                 android:background="@drawable/bg_blue_10"

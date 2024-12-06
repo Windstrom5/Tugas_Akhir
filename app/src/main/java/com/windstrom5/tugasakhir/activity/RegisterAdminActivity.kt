@@ -35,10 +35,12 @@ import com.windstrom5.tugasakhir.model.perusahaancreate
 import com.windstrom5.tugasakhir.model.response
 import de.hdodenhof.circleimageview.CircleImageView
 import okhttp3.MediaType
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import retrofit2.Call
 import retrofit2.Callback
+import retrofit2.HttpException
 import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -46,6 +48,7 @@ import www.sanju.motiontoast.MotionToast
 import www.sanju.motiontoast.MotionToastStyle
 import java.io.File
 import java.io.FileOutputStream
+import java.io.IOException
 import java.util.Date
 import java.text.ParseException
 import java.text.SimpleDateFormat
@@ -113,7 +116,7 @@ class RegisterAdminActivity : AppCompatActivity() {
 
                     // Format the date as needed
                     val dateFormat = SimpleDateFormat("dd MMMM yyyy", Locale("id", "ID"))
-                    val formattedDate = dateFormat.format(selectedDate.time)
+                    val formattedDate = dateFormat.format(selectedDate.time)    
                     val dateFormatSql = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
                     selectedDateSqlFormat = dateFormatSql.format(selectedDate.time)
                     TITanggal.editText?.setText(formattedDate)
@@ -233,7 +236,7 @@ class RegisterAdminActivity : AppCompatActivity() {
         val tanggalRequestBody = createPartFromString(selectedDateSqlFormat.toString())
         val profilePath = selectedFile
         val profilePart = if (profilePath != null) {
-            val requestFile = RequestBody.create(MediaType.parse("image/*"), profilePath)
+            val requestFile = RequestBody.create("image/*".toMediaTypeOrNull(), profilePath)
             MultipartBody.Part.createFormData("profile", profilePath.name, requestFile)
         } else {
             null
@@ -280,13 +283,16 @@ class RegisterAdminActivity : AppCompatActivity() {
                         sharedPreferencesManager.savePerusahaan(perusahaan)
                         Log.d("RegisterFailed10","RegisterFailed")
                         setLoading(false)
-                        MotionToast.createToast(this@RegisterAdminActivity, "Success",
-                            "Berhasil Menyimpan Data. Restarting APP....",
+                        MotionToast.createToast(
+                            this@RegisterAdminActivity,
+                            "Success",
+                            "Berhasil Menyimpan Data. Silahkan Aktifkan Akun Via Email",
                             MotionToastStyle.SUCCESS,
                             MotionToast.GRAVITY_BOTTOM,
                             MotionToast.LONG_DURATION,
-                            ResourcesCompat.getFont(this@RegisterAdminActivity, R.font.ralewaybold))
-                        val intent = Intent(this@RegisterAdminActivity, LoginActivity::class.java)
+                            ResourcesCompat.getFont(this@RegisterAdminActivity, R.font.ralewaybold)
+                        )
+                        val intent = Intent(this@RegisterAdminActivity,LoginActivity::class.java)
                         startActivity(intent)
                     } catch (e: ParseException) {
                         e.printStackTrace()
@@ -315,7 +321,33 @@ class RegisterAdminActivity : AppCompatActivity() {
                     MotionToast.LONG_DURATION,
                     ResourcesCompat.getFont(this@RegisterAdminActivity, R.font.ralewaybold)
                 )
-                Log.d("RegisterFailed2","Tidak Dapat Menyimpan Data")
+                when (t) {
+                    is IOException -> {
+                        // No internet connection on the device
+                        Toast.makeText(
+                            this@RegisterAdminActivity,
+                            "No internet connection. Please check your network and try again.",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                    is HttpException -> {
+                        // Server is reachable, but there’s an issue on the server
+                        val statusCode = t.code()
+                        Toast.makeText(
+                            this@RegisterAdminActivity,
+                            "Server error (code: $statusCode). Please try again later.",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                    else -> {
+                        // General error
+                        Toast.makeText(
+                            this@RegisterAdminActivity,
+                            "Request failed: ${t.message}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
             }
         })
     }
@@ -340,7 +372,7 @@ class RegisterAdminActivity : AppCompatActivity() {
 
         val logoFile = perusahaancreate?.logo
         val logoPart = if (logoFile != null && logoFile.exists()) {
-            val requestFile = RequestBody.create(MediaType.parse("image/*"), logoFile)
+            val requestFile = RequestBody.create("image/*".toMediaTypeOrNull(), logoFile)
             MultipartBody.Part.createFormData("logo", logoFile.name, requestFile)
         } else {
             null
@@ -389,13 +421,39 @@ class RegisterAdminActivity : AppCompatActivity() {
 
             override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
                 setLoading(false)
-                Log.d("RegisterFailed4", "Tidak Dapat Menyimpan Data. Error: ${t.message}")
+                when (t) {
+                    is IOException -> {
+                        // No internet connection on the device
+                        Toast.makeText(
+                            this@RegisterAdminActivity,
+                            "No internet connection. Please check your network and try again.",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                    is HttpException -> {
+                        // Server is reachable, but there’s an issue on the server
+                        val statusCode = t.code()
+                        Toast.makeText(
+                            this@RegisterAdminActivity,
+                            "Server error (code: $statusCode). Please try again later.",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                    else -> {
+                        // General error
+                        Toast.makeText(
+                            this@RegisterAdminActivity,
+                            "Request failed: ${t.message}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
             }
         })
     }
 
     private fun createPartFromString(value: String): RequestBody {
-        return RequestBody.create(MediaType.parse("text/plain"), value)
+        return RequestBody.create("text/plain".toMediaTypeOrNull(), value)
     }
 
     private fun openFilePicker() {

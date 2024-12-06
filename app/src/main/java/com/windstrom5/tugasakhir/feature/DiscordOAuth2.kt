@@ -51,13 +51,13 @@ class DiscordOAuth2 {
 
             override fun onResponse(call: Call, response: Response) {
                 try {
-                    val responseBody = response.body()?.string()
-                    if (response.isSuccessful && responseBody != null) {
+                    val responseBody = response.body.string()
+                    if (response.isSuccessful) {
                         val jsonObject = JSONObject(responseBody)
                         val accessToken = jsonObject.getString("access_token")
                         getUserInfo(accessToken, callback)
                     } else {
-                        callback(null, "Failed to authenticate: ${response.code()}")
+                        callback(null, "Failed to authenticate: ${response.code}")
                     }
                 } catch (e: JSONException) {
                     callback(null, "Error parsing response: ${e.message}")
@@ -78,7 +78,7 @@ class DiscordOAuth2 {
 
             override fun onResponse(call: Call, response: Response) {
                 try {
-                    val inputStream = response.body()?.byteStream()
+                    val inputStream = response.body?.byteStream()
                     val bitmap = BitmapFactory.decodeStream(inputStream)
                     callback(bitmap, null)
                 } catch (e: Exception) {
@@ -101,14 +101,14 @@ class DiscordOAuth2 {
 
             override fun onResponse(call: Call, response: Response) {
                 try {
-                    val responseBody = response.body()?.string()
+                    val responseBody = response.body?.string()
                     if (response.isSuccessful && responseBody != null) {
                         val gson = Gson()
                         Log.d("discord", responseBody)
                         val user = gson.fromJson(responseBody, DiscordUser::class.java)
                         callback(user, null)
                     } else {
-                        callback(null, "Failed to fetch user info: ${response.code()}")
+                        callback(null, "Failed to fetch user info: ${response.code}")
                     }
                 } catch (e: JSONException) {
                     callback(null, "Error parsing response: ${e.message}")

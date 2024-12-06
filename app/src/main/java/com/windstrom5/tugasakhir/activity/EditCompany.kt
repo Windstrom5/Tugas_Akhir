@@ -44,11 +44,15 @@ import com.windstrom5.tugasakhir.model.Perusahaan
 import com.windstrom5.tugasakhir.model.UpdatedPerusahaan
 import de.hdodenhof.circleimageview.CircleImageView
 import okhttp3.MediaType
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
+import okhttp3.ResponseBody
+import org.json.JSONObject
 import org.osmdroid.util.GeoPoint
 import retrofit2.Call
 import retrofit2.Callback
+import retrofit2.HttpException
 import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -57,6 +61,7 @@ import www.sanju.motiontoast.MotionToastStyle
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.IOException
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
 import java.sql.Time
@@ -156,8 +161,93 @@ class EditCompany : AppCompatActivity() {
 //            val jammasukedited = if ( textJamMasuk.text.toString() == perusahaan?.jam_masuk.toString()) null else  textJamMasuk.text.toString()
 //            val jamkeluaredited = if ( textJamKeluar.text.toString() == perusahaan?.jam_keluar.toString()) null else  textJamKeluar.text.toString()
 //            val alamat = if (textalamat.text.toString() == ReverseGeocoder.getFullAddressFromLocation(this@EditCompany, GeoPoint(perusahaan!!.latitude, perusahaan!!.longitude))) null else textalamat.text.toString()
-            perusahaan?.id?.let { it1 -> updateData(it1) }
+            val url = "https://selected-jaguar-presently.ngrok-free.app/api/"
+            val retrofit = Retrofit.Builder()
+                .baseUrl(url)
+                .addConverterFactory(GsonConverterFactory.create())
+                .build()
+
+            val apiService = retrofit.create(ApiService::class.java)
+            val call = apiService.getPerusahaan()
+
+            call.enqueue(object : Callback<ResponseBody> {
+                override fun onResponse(
+                    call: Call<ResponseBody>,
+                    response: Response<ResponseBody>
+                ) {
+                    if (response.isSuccessful) {
+                        val responseBody = response.body()?.string()
+                        val json = responseBody?.let { it1 -> JSONObject(it1) }
+                        val perusahaanArray = json?.optJSONArray("perusahaan")
+                        if (perusahaanArray != null && perusahaanArray.length() > 0) {
+                            var perusahaanExists = false
+
+                            for (i in 0 until perusahaanArray.length()) {
+                                val perusahaanObj = perusahaanArray.getJSONObject(i)
+                                val perusahaanNama = perusahaanObj.getString("nama").trim()
+
+                                // Compare the input nama with the perusahaan nama
+                                if (textNama.text.toString().equals(perusahaanNama, ignoreCase = true) &&
+                                    !textNama.text.toString().equals(perusahaan?.nama, ignoreCase = true)) {
+                                    perusahaanExists = true
+                                    break
+                                }
+                            }
+
+                            if (perusahaanExists) {
+                                // Handle case where perusahaan with the same name already exists
+                                MotionToast.createToast(
+                                    this@EditCompany,
+                                    "Error",
+                                    "Perusahaan Sudah Ada",
+                                    MotionToastStyle.ERROR,
+                                    MotionToast.GRAVITY_BOTTOM,
+                                    MotionToast.LONG_DURATION,
+                                    ResourcesCompat.getFont(this@EditCompany, R.font.ralewaybold)
+                                )
+                            }else{
+                                perusahaan?.id?.let { it1 -> updateData(it1) }
+                            }
+                        } else {
+                            perusahaan?.id?.let { it1 -> updateData(it1) }
+                        }
+                    }
+                }
+
+                override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
+                    when (t) {
+                        is IOException -> {
+                            // No internet connection on the device
+                            Toast.makeText(
+                                this@EditCompany,
+                                "No internet connection. Please check your network and try again.",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                        is HttpException -> {
+                            // Server is reachable, but there’s an issue on the server
+                            val statusCode = t.code()
+                            Toast.makeText(
+                                this@EditCompany,
+                                "Server error (code: $statusCode). Please try again later.",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                        else -> {
+                            // General error
+                            Toast.makeText(
+                                this@EditCompany,
+                                "Request failed: ${t.message}",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
+                    setLoading(false)
+                }
+            })
+
         }
+
     }
 
 //    private fun showMoneyInputDialog() {
@@ -209,7 +299,7 @@ class EditCompany : AppCompatActivity() {
         val call: Call<ApiResponse>
 //        if (selectedFile != null) {
         val logoPart = selectedFile?.let {
-            val requestFile = RequestBody.create(MediaType.parse("image/jpeg"), it)
+            val requestFile = RequestBody.create("image/jpeg".toMediaTypeOrNull(), it)
             MultipartBody.Part.createFormData("logo", it.name, requestFile)
         }
         Log.d("ApiResponse",selectedFile.toString())
@@ -297,7 +387,7 @@ class EditCompany : AppCompatActivity() {
         return Time(date.time)
     }
     private fun createPartFromString(value: String): RequestBody {
-        return RequestBody.create(MediaType.parse("text/plain"), value)
+        return RequestBody.create("text/plain".toMediaTypeOrNull(), value)
     }
     private fun pickImageFromGallery() {
         val intent = Intent(Intent.ACTION_GET_CONTENT)

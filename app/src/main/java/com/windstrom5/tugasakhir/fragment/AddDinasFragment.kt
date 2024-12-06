@@ -34,7 +34,7 @@ import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
 import androidx.fragment.app.Fragment
-import br.com.simplepass.loading_button_lib.customViews.CircularProgressButton
+import br.com.simplepass.loadingbutton.customViews.CircularProgressButton
 import com.google.android.material.textfield.TextInputLayout
 import com.google.gson.Gson
 import com.google.gson.JsonObject
@@ -43,15 +43,17 @@ import com.windstrom5.tugasakhir.R
 import com.windstrom5.tugasakhir.activity.RegisterAdminActivity
 import com.windstrom5.tugasakhir.connection.ApiResponse
 import com.windstrom5.tugasakhir.connection.ApiService
+import com.windstrom5.tugasakhir.feature.EmailSender
+import com.windstrom5.tugasakhir.model.Admin
 import com.windstrom5.tugasakhir.model.Pekerja
 import com.windstrom5.tugasakhir.model.Perusahaan
-import de.galgtonold.jollydayandroid.Holiday
-import de.galgtonold.jollydayandroid.HolidayCalendar
-import de.galgtonold.jollydayandroid.HolidayManager
 import okhttp3.MediaType
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
+import okhttp3.ResponseBody
 import org.json.JSONArray
+import org.json.JSONException
 import org.json.JSONObject
 import retrofit2.Call
 import retrofit2.Callback
@@ -87,6 +89,7 @@ class AddDinasFragment : Fragment() {
     private lateinit var selectedFileName: TextView
     private var perusahaan : Perusahaan? = null
     private var pekerja : Pekerja? = null
+    private var adminList: List<Admin>? = null
 //    private val watcher = object : TextWatcher {
 //        override fun beforeTextChanged(charSequence: CharSequence?, start: Int, count: Int, after: Int) {
 //            // Not needed for this example
@@ -120,6 +123,7 @@ class AddDinasFragment : Fragment() {
             android.R.layout.simple_dropdown_item_1line,
             combinedDataList
         )
+        perusahaan?.let { fetchDataFromApi(it.nama) }
         save = view.findViewById(R.id.submitButton)
         keterangan = view.findViewById(R.id.keterangan)
         textviewtujuan = view.findViewById(R.id.actujuan)
@@ -128,7 +132,7 @@ class AddDinasFragment : Fragment() {
         tilberangkat = view.findViewById(R.id.TITanggalberangkat)
         tilpulang = view.findViewById(R.id.TITanggalpulang)
         tilberangkat.setEndIconOnClickListener {
-            tilberangkat.editText?.let { it1 -> showDatePickerDialog(it1) }
+            tilberangkat.editText?.let { it1 -> showDatePickerDialog(it1,) }
         }
         tilpulang.setEndIconOnClickListener {
             tilpulang.editText?.let { it1 -> showDatePickerDialog(it1) }
@@ -178,7 +182,7 @@ class AddDinasFragment : Fragment() {
         val kegiatan = createPartFromString(keterangan.editText?.text.toString())
 
         val buktifile = selectedFile
-        val requestFile = RequestBody.create(MediaType.parse("pdf/*"), buktifile)
+        val requestFile = RequestBody.create("pdf/*".toMediaTypeOrNull(), buktifile)
         val buktipart = MultipartBody.Part.createFormData("bukti", buktifile.name, requestFile)
         val call = apiService.uploadDinas(nama_Perusahaan,nama,tujuan, tanggal_berangkat,tanggal_pulang, kegiatan, buktipart)
         call.enqueue(object : Callback<ApiResponse> {
@@ -186,7 +190,9 @@ class AddDinasFragment : Fragment() {
                 if (response.isSuccessful) {
                     val vectorDrawable = ContextCompat.getDrawable(requireContext(), R.drawable.done_bitmap)
                     val bitmap = vectorDrawable?.let { vectorToBitmap(it) }
-                    save.doneLoadingAnimation(Color.parseColor("#AAFF00"), bitmap)
+                    if (bitmap != null) {
+                        save.doneLoadingAnimation(Color.parseColor("#AAFF00"), bitmap)
+                    }
                     val apiResponse = response.body()
                     Log.d("ApiResponse", "Status: ${apiResponse?.status}, Message: ${apiResponse?.message}")
                     MotionToast.createToast(requireActivity(), "Add Dinas Success",
@@ -195,6 +201,18 @@ class AddDinasFragment : Fragment() {
                         MotionToast.GRAVITY_BOTTOM,
                         MotionToast.LONG_DURATION,
                         ResourcesCompat.getFont(requireContext(), R.font.ralewaybold))
+                    val notificationMessage = """
+                        Notification: Dinas Session Requested
+                        
+                        Employee Name: ${pekerja.nama}
+                        Destination: ${textviewtujuan.text.toString()}
+                        Departure Date: ${tilberangkat.editText?.text.toString()}
+                        Return Date: ${tilpulang.editText?.text.toString()}
+                        Activity: ${keterangan.editText?.text.toString()}
+                        
+                        Please review the dinas submission for approval.
+                """.trimIndent()
+                    sendEmailToAllAdmins("Dinas Requested", notificationMessage)
                 } else {
                     save.revertAnimation()
                     Log.e("ApiResponse", "Error: ${response.code()}")
@@ -208,6 +226,12 @@ class AddDinasFragment : Fragment() {
         })
         setLoading(false)
     }
+    private fun sendEmailToAllAdmins(subject: String, message: String) {
+        adminList?.forEach { admin ->
+            val receiverEmail = admin.email
+            EmailSender.sendEmail(receiverEmail, subject, message)
+        }
+    }
     private fun vectorToBitmap(vectorDrawable: Drawable): Bitmap {
         val bitmap = Bitmap.createBitmap(vectorDrawable.intrinsicWidth,
             vectorDrawable.intrinsicHeight, Bitmap.Config.ARGB_8888)
@@ -217,7 +241,7 @@ class AddDinasFragment : Fragment() {
         return bitmap
     }
     private fun createPartFromString(value: String): RequestBody {
-        return RequestBody.create(MediaType.parse("text/plain"), value)
+        return RequestBody.create("text/plain".toMediaTypeOrNull(), value)
     }
     private fun getBundle() {
         val arguments = arguments
@@ -372,6 +396,65 @@ class AddDinasFragment : Fragment() {
         Log.d("ProvinsiList",provinsiDataList.toString())
         return provinsiDataList
     }
+    private fun fetchDataFromApi(namaPerusahaan: String) {
+        val url = "https://selected-jaguar-presently.ngrok-free.app/api/"
+        Log.d("FetchDataError", "Nama: $namaPerusahaan")
+
+        val retrofit = Retrofit.Builder()
+            .baseUrl(url)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+
+        val apiService = retrofit.create(ApiService::class.java)
+
+        val call = apiService.getDataPekerja(namaPerusahaan)
+        call.enqueue(object : Callback<ResponseBody> {
+            override fun onResponse(call: Call<ResponseBody>, response: Response<ResponseBody>) {
+                if (response.isSuccessful) {
+                    response.body()?.let { responseBody ->
+                        try {
+                            val responseData = JSONObject(responseBody.string())
+                            val adminArray = responseData.getJSONArray("admin")
+                            // Parse admin and pekerja data
+                            adminList = parseAdminList(adminArray)  // Assign parsed admin list
+                        } catch (e: JSONException) {
+                            Log.e("FetchDataError", "Error parsing JSON: ${e.message}")
+                        }
+                    }
+                } else {
+                    // Handle unsuccessful response
+                    Log.e("FetchDataError", "Failed to fetch data: ${response.code()}")
+                }
+            }
+
+            override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
+                // Handle network failures
+                Log.e("FetchDataError", "Failed to fetch data: ${t.message}")
+            }
+        })
+    }
+    private fun parseAdminList(adminArray: JSONArray): List<Admin> {
+        val adminList = mutableListOf<Admin>()
+        for (i in 0 until adminArray.length()) {
+            val adminObject = adminArray.getJSONObject(i)
+            adminList.add(
+                Admin(
+                    adminObject.getInt("id"),
+                    adminObject.getInt("id_perusahaan"),
+                    adminObject.getString("email"),
+                    adminObject.getString("password"),
+                    adminObject.getString("nama"),
+                    parseDate(adminObject.getString("tanggal_lahir")),
+                    adminObject.getString("profile")
+                )
+            )
+        }
+        return adminList
+    }
+    private fun parseDate(dateString: String): Date {
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        return dateFormat.parse(dateString) ?: Date()
+    }
 //private suspend fun isInternetAvailable(): Boolean {
 //    return withContext(Dispatchers.IO) {
 //        try {
@@ -405,40 +488,164 @@ class AddDinasFragment : Fragment() {
     }
 
     private fun showDatePickerDialog(editText: EditText) {
-        // Load holidays from JSON
         val holidaysMap = loadHolidaysFromJson(requireContext())
+        val disabledDates = holidaysMap.keys.toSet()
 
-        val disabledDays = holidaysMap.keys.toTypedArray()
+        val disabledDatesList = mutableSetOf<Calendar>()
+        disabledDatesList.addAll(disabledDates)
 
-        val now = Calendar.getInstance()
+        perusahaan?.let {
+            pekerja?.let { it1 ->
+                fetchDisabledDatesForDinas(it.nama, it1.nama) { dinasDates ->
+                    fetchDisabledDatesForIzin(it.nama, it1.nama) { izinDates ->
+                        disabledDatesList.addAll(dinasDates)
+                        disabledDatesList.addAll(izinDates)
 
-        val dpd = DatePickerDialog.newInstance(
-            DatePickerDialog.OnDateSetListener { _, year, monthOfYear, dayOfMonth ->
-                val selectedDate = Calendar.getInstance().apply {
-                    set(year, monthOfYear, dayOfMonth)
+                        val now = Calendar.getInstance()
+
+                        val dpd = DatePickerDialog.newInstance(
+                            { _, year, monthOfYear, dayOfMonth ->
+                                val selectedDate = Calendar.getInstance().apply {
+                                    set(year, monthOfYear, dayOfMonth)
+                                }
+
+                                // Check if the selected date is disabled
+                                if (disabledDatesList.any { it.isSameDay(selectedDate) }) {
+                                    Toast.makeText(
+                                        requireContext(),
+                                        "Selected date is not available. Please choose another date.",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                } else {
+                                    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                                    val formattedDate = dateFormat.format(selectedDate.time)
+                                    editText.setText(formattedDate)
+                                }
+                            },
+                            now.get(Calendar.YEAR),
+                            now.get(Calendar.MONTH),
+                            now.get(Calendar.DAY_OF_MONTH)
+                        )
+
+                        dpd.setDisabledDays(disabledDatesList.toTypedArray())
+                        dpd.show(childFragmentManager, "DatePickerDialog")
+                    }
                 }
+            }
+        }
+    }
+    private fun Calendar.isSameDay(other: Calendar): Boolean {
+        return this.get(Calendar.YEAR) == other.get(Calendar.YEAR) &&
+                this.get(Calendar.MONTH) == other.get(Calendar.MONTH) &&
+                this.get(Calendar.DAY_OF_MONTH) == other.get(Calendar.DAY_OF_MONTH)
+    }
 
-                // Check if the selected date is a holiday
-                if (holidaysMap.containsKey(selectedDate)) {
-                    // Show Toast
-                    Toast.makeText(
-                        requireContext(),
-                        "Selected date is a holiday. Please choose another date.",
-                        Toast.LENGTH_LONG
-                    ).show()
+
+    private fun fetchDisabledDatesForDinas(
+        namaPerusahaan: String,
+        namaPekerja: String,
+        callback: (Set<Calendar>) -> Unit
+    ) {
+        val url = "https://selected-jaguar-presently.ngrok-free.app/api/"
+        val retrofit = Retrofit.Builder()
+            .baseUrl(url)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+        val apiService = retrofit.create(ApiService::class.java)
+        val call = apiService.getDataDinasPekerja(namaPerusahaan, namaPekerja)
+
+        call.enqueue(object : Callback<ResponseBody> {
+            override fun onResponse(call: Call<ResponseBody>, response: Response<ResponseBody>) {
+                if (response.isSuccessful) {
+                    val disabledDates = mutableSetOf<Calendar>()
+                    response.body()?.let { responseBody ->
+                        try {
+                            val jsonResponse = responseBody.string()
+                            val responseData = JSONObject(jsonResponse)
+                            val dataArray = responseData.getJSONArray("data")
+
+                            for (i in 0 until dataArray.length()) {
+                                val jsonObject = dataArray.getJSONObject(i)
+                                val tanggalBerangkat = parseDate(jsonObject.getString("tanggal_berangkat"))
+                                val tanggalPulang = parseDate(jsonObject.getString("tanggal_pulang"))
+                                val status = jsonObject.getString("status")
+
+                                if (status == "Accept") {
+                                    val startCal = Calendar.getInstance().apply { time = tanggalBerangkat }
+                                    val endCal = Calendar.getInstance().apply { time = tanggalPulang }
+
+                                    // Add all dates in the range to disabled dates
+                                    while (!startCal.after(endCal)) {
+                                        disabledDates.add(Calendar.getInstance().apply { time = startCal.time })
+                                        startCal.add(Calendar.DAY_OF_MONTH, 1)
+                                    }
+                                }
+                            }
+                        } catch (e: JSONException) {
+                            Log.e("FetchDataError", "Error parsing JSON: ${e.message}")
+                        }
+                    }
+                    callback(disabledDates)
                 } else {
-                    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                    val formattedDate = dateFormat.format(selectedDate.time)
-                    editText.setText(formattedDate)
+                    Log.e("FetchDataError", "Failed to fetch data: ${response.code()}")
+                    callback(emptySet())
                 }
-            },
-            now.get(Calendar.YEAR),
-            now.get(Calendar.MONTH),
-            now.get(Calendar.DAY_OF_MONTH)
-        )
+            }
 
-        dpd.setDisabledDays(disabledDays)
-        dpd.show(childFragmentManager, "DatePickerDialog")
+            override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
+                Log.e("FetchDataError", "Failed to fetch data: ${t.message}")
+                callback(emptySet())
+            }
+        })
+    }
+    private fun fetchDisabledDatesForIzin(
+        namaPerusahaan: String,
+        namaPekerja: String,
+        callback: (Set<Calendar>) -> Unit
+    ) {
+        val url = "https://selected-jaguar-presently.ngrok-free.app/api/"
+        val retrofit = Retrofit.Builder()
+            .baseUrl(url)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+        val apiService = retrofit.create(ApiService::class.java)
+        val call = apiService.getDataIzinPekerja(namaPerusahaan, namaPekerja)
+
+        call.enqueue(object : Callback<ResponseBody> {
+            override fun onResponse(call: Call<ResponseBody>, response: Response<ResponseBody>) {
+                if (response.isSuccessful) {
+                    val disabledDates = mutableSetOf<Calendar>()
+                    response.body()?.let { responseBody ->
+                        try {
+                            val jsonResponse = responseBody.string()
+                            val responseData = JSONObject(jsonResponse)
+                            val dataArray = responseData.getJSONArray("data")
+
+                            for (i in 0 until dataArray.length()) {
+                                val jsonObject = dataArray.getJSONObject(i)
+                                val tanggal = parseDate(jsonObject.getString("tanggal"))
+                                val status = jsonObject.getString("status")
+
+                                if (status == "Accept") {
+                                    disabledDates.add(Calendar.getInstance().apply { time = tanggal })
+                                }
+                            }
+                        } catch (e: JSONException) {
+                            Log.e("FetchDataError", "Error parsing JSON: ${e.message}")
+                        }
+                    }
+                    callback(disabledDates)
+                } else {
+                    Log.e("FetchDataError", "Failed to fetch data: ${response.code()}")
+                    callback(emptySet())
+                }
+            }
+
+            override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
+                Log.e("FetchDataError", "Failed to fetch data: ${t.message}")
+                callback(emptySet())
+            }
+        })
     }
 
     private fun loadHolidaysFromJson(context: Context): Map<Calendar, String> {

@@ -39,7 +39,7 @@ import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.isEmpty
-import br.com.simplepass.loading_button_lib.customViews.CircularProgressButton
+import br.com.simplepass.loadingbutton.customViews.CircularProgressButton
 import com.android.volley.Request
 import com.android.volley.toolbox.JsonArrayRequest
 import com.android.volley.toolbox.Volley
@@ -49,12 +49,17 @@ import com.wdullaer.materialdatetimepicker.date.DatePickerDialog
 import com.windstrom5.tugasakhir.activity.RegisterActivity
 import com.windstrom5.tugasakhir.connection.ApiResponse
 import com.windstrom5.tugasakhir.connection.ApiService
+import com.windstrom5.tugasakhir.feature.EmailSender
+import com.windstrom5.tugasakhir.model.Admin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
+import okhttp3.ResponseBody
 import org.json.JSONArray
+import org.json.JSONException
 import org.json.JSONObject
 import retrofit2.Call
 import retrofit2.Callback
@@ -88,6 +93,7 @@ class AddLemburFragment : Fragment() {
     private lateinit var selectedFile: File
     private val PICK_IMAGE_REQUEST_CODE = 123
     private var isTIMasukFilled = false
+    private var adminList: List<Admin>? = null
     private var holidaysMap: MutableMap<Calendar, String> = mutableMapOf()
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -97,6 +103,7 @@ class AddLemburFragment : Fragment() {
         val view = inflater.inflate(R.layout.fragment_add_lembur, container, false)
         TINama = view.findViewById(R.id.nama)
         getBundle()
+        perusahaan?.let { fetchDataFromApi(it.nama) }
         fetchHolidayData()
         TITanggal = view.findViewById(R.id.TITanggal)
         TIMasuk = view.findViewById(R.id.TIMasuk)
@@ -159,6 +166,65 @@ class AddLemburFragment : Fragment() {
 
         return view
     }
+    private fun fetchDataFromApi(namaPerusahaan: String) {
+        val url = "https://selected-jaguar-presently.ngrok-free.app/api/"
+        Log.d("FetchDataError", "Nama: $namaPerusahaan")
+
+        val retrofit = Retrofit.Builder()
+            .baseUrl(url)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+
+        val apiService = retrofit.create(ApiService::class.java)
+
+        val call = apiService.getDataPekerja(namaPerusahaan)
+        call.enqueue(object : Callback<ResponseBody> {
+            override fun onResponse(call: Call<ResponseBody>, response: Response<ResponseBody>) {
+                if (response.isSuccessful) {
+                    response.body()?.let { responseBody ->
+                        try {
+                            val responseData = JSONObject(responseBody.string())
+                            val adminArray = responseData.getJSONArray("admin")
+                            // Parse admin and pekerja data
+                            adminList = parseAdminList(adminArray)  // Assign parsed admin list
+                        } catch (e: JSONException) {
+                            Log.e("FetchDataError", "Error parsing JSON: ${e.message}")
+                        }
+                    }
+                } else {
+                    // Handle unsuccessful response
+                    Log.e("FetchDataError", "Failed to fetch data: ${response.code()}")
+                }
+            }
+
+            override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
+                // Handle network failures
+                Log.e("FetchDataError", "Failed to fetch data: ${t.message}")
+            }
+        })
+    }
+    private fun parseAdminList(adminArray: JSONArray): List<Admin> {
+        val adminList = mutableListOf<Admin>()
+        for (i in 0 until adminArray.length()) {
+            val adminObject = adminArray.getJSONObject(i)
+            adminList.add(
+                Admin(
+                    adminObject.getInt("id"),
+                    adminObject.getInt("id_perusahaan"),
+                    adminObject.getString("email"),
+                    adminObject.getString("password"),
+                    adminObject.getString("nama"),
+                    parseDate(adminObject.getString("tanggal_lahir")),
+                    adminObject.getString("profile")
+                )
+            )
+        }
+        return adminList
+    }
+    private fun parseDate(dateString: String): Date {
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        return dateFormat.parse(dateString) ?: Date()
+    }
 //private suspend fun isInternetAvailable(): Boolean {
 //    return withContext(Dispatchers.IO) {
 //        try {
@@ -211,6 +277,28 @@ class AddLemburFragment : Fragment() {
                 .build(Dialog::dismiss)
                 .show()
             return false
+        }
+        // Validate that TIMasuk and TIPulang fall within company hours
+        val perusahaanJamMasuk = perusahaan?.jam_masuk
+        val perusahaanJamKeluar = perusahaan?.jam_keluar
+
+        val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+        val timMasuk = timeFormat.parse(TIMasuk.editText?.text.toString())
+        val timPulang = timeFormat.parse(TIPulang.editText?.text.toString())
+        val perusahaanMasukTime = timeFormat.parse(perusahaanJamMasuk.toString())
+        val perusahaanKeluarTime = timeFormat.parse(perusahaanJamKeluar.toString())
+
+        if (timMasuk != null && timPulang != null && perusahaanMasukTime != null && perusahaanKeluarTime != null) {
+            if (timMasuk < perusahaanMasukTime || timPulang > perusahaanKeluarTime || timMasuk >= timPulang) {
+                PopupDialog.getInstance(requireContext())
+                    .statusDialogBuilder()
+                    .createErrorDialog()
+                    .setHeading("Cannot Save")
+                    .setDescription("Ensure 'Jam Masuk' is after ${perusahaanJamMasuk}, 'Jam Pulang' is before ${perusahaanJamKeluar}, and 'Jam Masuk' is before 'Jam Pulang'.")
+                    .build(Dialog::dismiss)
+                    .show()
+                return false
+            }
         }
         return true
     }
@@ -465,7 +553,7 @@ class AddLemburFragment : Fragment() {
         val kegiatan = createPartFromString(TIPekerjaan.editText?.text.toString())
 
         val buktifile = selectedFile
-        val requestFile = RequestBody.create(MediaType.parse("pdf/*"), buktifile)
+        val requestFile = RequestBody.create("pdf/*".toMediaTypeOrNull(), buktifile)
         val buktipart = MultipartBody.Part.createFormData("bukti", buktifile.name, requestFile)
         val call = apiService.uploadLembur(nama_Perusahaan,nama,tanggal, waktu_masuk,waktu_pulang, kegiatan, buktipart)
         call.enqueue(object : Callback<ApiResponse> {
@@ -473,7 +561,9 @@ class AddLemburFragment : Fragment() {
                 if (response.isSuccessful) {
                     val vectorDrawable = ContextCompat.getDrawable(requireContext(), R.drawable.done_bitmap)
                     val bitmap = vectorDrawable?.let { vectorToBitmap(it) }
-                    save.doneLoadingAnimation(Color.parseColor("#AAFF00"), bitmap)
+                    if (bitmap != null) {
+                        save.doneLoadingAnimation(Color.parseColor("#AAFF00"), bitmap)
+                    }
                     val apiResponse = response.body()
                     Log.d("ApiResponse", "Status: ${apiResponse?.status}, Message: ${apiResponse?.message}")
                     MotionToast.createToast(requireActivity(), "Add Lembur Success",
@@ -482,6 +572,19 @@ class AddLemburFragment : Fragment() {
                         MotionToast.GRAVITY_BOTTOM,
                         MotionToast.LONG_DURATION,
                         ResourcesCompat.getFont(requireContext(), R.font.ralewaybold))
+                    val notificationMessage = """
+                        Notification: Overtime Requested
+                        
+                        Employee Name: ${pekerja.nama}
+                        Company: ${perusahaan.nama}
+                        Overtime Date: $sqlDate
+                        Check-in Time: ${TIMasuk.editText?.text.toString()}
+                        Check-out Time: ${TIPulang.editText?.text.toString()}
+                        Job Details: ${TIPekerjaan.editText?.text.toString()}
+                        
+                        Please review the overtime submission for approval.
+                    """.trimIndent()
+                    sendEmailToAllAdmins("Dinas Requested", notificationMessage)
                 } else {
                     save.revertAnimation()
                     val errorMessage = response.errorBody()?.string() ?: "Unknown error"
@@ -496,8 +599,14 @@ class AddLemburFragment : Fragment() {
         })
         setLoading(false)
     }
+    private fun sendEmailToAllAdmins(subject: String, message: String) {
+        adminList?.forEach { admin ->
+            val receiverEmail = admin.email
+            EmailSender.sendEmail(receiverEmail, subject, message)
+        }
+    }
     private fun createPartFromString(value: String): RequestBody {
-        return RequestBody.create(MediaType.parse("text/plain"), value)
+        return RequestBody.create("text/plain".toMediaTypeOrNull(), value)
     }
     private fun stringToSqlTime(timeString: String): Time {
         val dateFormat = SimpleDateFormat("HH:mm", Locale.getDefault())

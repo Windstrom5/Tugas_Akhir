@@ -40,7 +40,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.content.res.ResourcesCompat
 import androidx.fragment.app.DialogFragment
-import br.com.simplepass.loading_button_lib.customViews.CircularProgressButton
+import br.com.simplepass.loadingbutton.customViews.CircularProgressButton
 import com.android.volley.toolbox.ImageRequest
 import com.android.volley.toolbox.Volley
 import com.bumptech.glide.Glide
@@ -73,11 +73,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import okhttp3.ResponseBody
 import okio.Buffer
 import org.json.JSONArray
+import org.json.JSONException
 import org.json.JSONObject
 import retrofit2.Call
 import retrofit2.Callback
@@ -112,6 +114,7 @@ class PreviewDialogFragment: DialogFragment() {
     private var islast:Boolean?= null
     private var sessionList: List<session_lembur>? = null
     private var adminList: List<Admin>? = null
+    private var pekerjaList: List<Pekerja>? = null
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -127,12 +130,101 @@ class PreviewDialogFragment: DialogFragment() {
         }
         return view
     }
+    private fun getNamaPekerjaById(idPekerja: Int): String? {
+        // Ensure pekerjaList is not null or empty
+        pekerjaList?.let { list ->
+            // Find the pekerja with the matching id
+            val pekerja = list.find { it.id == idPekerja }
+            // Return the name if pekerja is found, otherwise return null
+            return pekerja?.nama
+        }
+        return null // If pekerjaList is null or no match found
+    }
     private fun pickImageFromGallery() {
         val intent = Intent(Intent.ACTION_GET_CONTENT)
         intent.type = "image/*"
         startActivityForResult(intent, PICK_IMAGE_REQUEST_CODE)
     }
+    private fun parseAdminList(adminArray: JSONArray): List<Admin> {
+        val adminList = mutableListOf<Admin>()
+        for (i in 0 until adminArray.length()) {
+            val adminObject = adminArray.getJSONObject(i)
+            adminList.add(
+                Admin(
+                    adminObject.getInt("id"),
+                    adminObject.getInt("id_perusahaan"),
+                    adminObject.getString("email"),
+                    adminObject.getString("password"),
+                    adminObject.getString("nama"),
+                    parseDate(adminObject.getString("tanggal_lahir")),
+                    adminObject.getString("profile")
+                )
+            )
+        }
+        return adminList
+    }
+    private fun parseDate(dateString: String): Date {
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        return dateFormat.parse(dateString) ?: Date()
+    }
+    private fun parsePekerjaList(pekerjaArray: JSONArray): List<Pekerja> {
+        val pekerjaList = mutableListOf<Pekerja>()
+        for (i in 0 until pekerjaArray.length()) {
+            val pekerjaObject = pekerjaArray.getJSONObject(i)
+            pekerjaList.add(
+                Pekerja(
+                    pekerjaObject.getInt("id"),
+                    pekerjaObject.getInt("id_perusahaan"),
+                    pekerjaObject.getString("email"),
+                    pekerjaObject.getString("password"),
+                    pekerjaObject.getString("nama"),
+                    parseDate(pekerjaObject.getString("tanggal_lahir")),
+                    pekerjaObject.getString("profile")
+                )
+            )
+        }
+        return pekerjaList
+    }
+    private fun fetchDataFromApi(namaPerusahaan: String) {
+        val url = "https://selected-jaguar-presently.ngrok-free.app/api/"
+        Log.d("FetchDataError", "Nama: $namaPerusahaan")
 
+        val retrofit = Retrofit.Builder()
+            .baseUrl(url)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+
+        val apiService = retrofit.create(ApiService::class.java)
+
+        val call = apiService.getDataPekerja(namaPerusahaan)
+        call.enqueue(object : Callback<ResponseBody> {
+            override fun onResponse(call: Call<ResponseBody>, response: Response<ResponseBody>) {
+                if (response.isSuccessful) {
+                    response.body()?.let { responseBody ->
+                        try {
+                            val responseData = JSONObject(responseBody.string())
+                            val adminArray = responseData.getJSONArray("admin")
+                            // Parse admin and pekerja data
+                            adminList = parseAdminList(adminArray)  // Assign parsed admin list
+                            val pekerjaArray = responseData.getJSONArray("pekerja")
+                            pekerjaList = parsePekerjaList(pekerjaArray)  // Assign parsed pekerja lis
+
+                        } catch (e: JSONException) {
+                            Log.e("FetchDataError", "Error parsing JSON: ${e.message}")
+                        }
+                    }
+                } else {
+                    // Handle unsuccessful response
+                    Log.e("FetchDataError", "Failed to fetch data: ${response.code()}")
+                }
+            }
+
+            override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
+                // Handle network failures
+                Log.e("FetchDataError", "Failed to fetch data: ${t.message}")
+            }
+        })
+    }
     private fun calculateSessionsAdmin(
         waktuMasuk: Time,
         waktuPulang: Time,
@@ -431,6 +523,25 @@ class PreviewDialogFragment: DialogFragment() {
             EmailSender.sendEmail(receiverEmail, subject, message)
         }
     }
+    private fun sendEmailToPekerja(subject: String, message: String) {
+        // Loop through the lemburList
+        pekerjaList?.forEach { pekerja ->
+            // Find the matching pekerja by id_pekerja in pekerjaList
+            val matchedPekerja = pekerjaList?.find { pekerja -> pekerja.id == lembur?.id_pekerja }
+
+            // If a match is found, send an email to that pekerja
+            matchedPekerja?.let { pekerja ->
+                val email = pekerja.email
+                if (email.isNotEmpty()) {
+                    val receiverEmail = pekerja.email
+                    EmailSender.sendEmail(receiverEmail, subject, message)
+                    Log.d("EmailSent", "Email sent to: $email")
+                } else {
+                    Log.d("EmailError", "No email found for Pekerja with ID: ${pekerja.id}")
+                }
+            }
+        }
+    }
     private fun updateSessionDetails(selectedSession: Pair<String, Pair<String, String>>) {
         val startTime = selectedSession.second.first
         val endTime = selectedSession.second.second
@@ -565,7 +676,7 @@ class PreviewDialogFragment: DialogFragment() {
         val keterangan = createPartFromString(pekerjaan?.editText?.text.toString())
         val buktifile = selectedFile
         val buktiPart = if (buktifile != null) {
-            val requestFile = RequestBody.create(MediaType.parse("image/*"), buktifile)
+            val requestFile = RequestBody.create("image/*".toMediaTypeOrNull(), buktifile)
             MultipartBody.Part.createFormData("bukti", buktifile.name, requestFile)
         } else {
             null
@@ -706,34 +817,49 @@ class PreviewDialogFragment: DialogFragment() {
         val id_lembur = createPartFromString(lembur?.id.toString())
         val keterangan = createPartFromString(pekerjaan?.editText?.text.toString())
         val buktifile = selectedFile
-        val requestFile = RequestBody.create(MediaType.parse("image/*"), buktifile)
-        val buktipart = MultipartBody.Part.createFormData("bukti", buktifile?.name, requestFile)
-        val call = apiService.AddSessionLembur(id_lembur,jam,keterangan,buktipart)
-        call.enqueue(object : Callback<ApiResponse> {
-            override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
-                if (response.isSuccessful) {
-//                    val vectorDrawable = ContextCompat.getDrawable(requireContext(), R.drawable.done_bitmap)
-//                    val bitmap = vectorDrawable?.let { vectorToBitmap(it) }
-//                    view?.findViewById<CircularProgressButton>(R.id.acceptButton)?.doneLoadingAnimation(Color.parseColor("#AAFF00"), bitmap)
-                    val apiResponse = response.body()
-                    Log.d("ApiResponse", "Status: ${apiResponse?.status}, Message: ${apiResponse?.message}")
-                    MotionToast.createToast(requireActivity(), "Add Lembur Success",
-                        "Session Berhasil Ditambahkan",
-                        MotionToastStyle.SUCCESS,
-                        MotionToast.GRAVITY_BOTTOM,
-                        MotionToast.LONG_DURATION,
-                        ResourcesCompat.getFont(requireContext(), R.font.ralewaybold))
-                    dismiss()
-                } else {
-                    val errorMessage = response.errorBody()?.string() ?: "Unknown error"
-                    Log.e("ApiResponse", "Error: ${response.message()} - $errorMessage")
+        val requestFile = buktifile?.let { RequestBody.create("image/*".toMediaTypeOrNull(), it) }
+        val buktipart =
+            requestFile?.let { MultipartBody.Part.createFormData("bukti", buktifile?.name, it) }
+        val call = buktipart?.let { apiService.AddSessionLembur(id_lembur,jam,keterangan, it) }
+        if (call != null) {
+            call.enqueue(object : Callback<ApiResponse> {
+                override fun onResponse(call: Call<ApiResponse>, response: Response<ApiResponse>) {
+                    if (response.isSuccessful) {
+    //                    val vectorDrawable = ContextCompat.getDrawable(requireContext(), R.drawable.done_bitmap)
+    //                    val bitmap = vectorDrawable?.let { vectorToBitmap(it) }
+    //                    view?.findViewById<CircularProgressButton>(R.id.acceptButton)?.doneLoadingAnimation(Color.parseColor("#AAFF00"), bitmap)
+                        val nama = lembur?.id_pekerja?.let { getNamaPekerjaById(it) }
+                        val apiResponse = response.body()
+                        Log.d("ApiResponse", "Status: ${apiResponse?.status}, Message: ${apiResponse?.message}")
+                        MotionToast.createToast(requireActivity(), "Add Lembur Success",
+                            "Session Berhasil Ditambahkan",
+                            MotionToastStyle.SUCCESS,
+                            MotionToast.GRAVITY_BOTTOM,
+                            MotionToast.LONG_DURATION,
+                            ResourcesCompat.getFont(requireContext(), R.font.ralewaybold))
+                        val message = """
+                            Notification: Overtime Session Uploaded
+                            
+                            Employee Name: ${nama}
+                            Overtime Date: $timeFormatter
+                            Selected Session: ${view?.findViewById<AutoCompleteTextView>(R.id.ACsesi)?.text.toString()}
+                            Job : ${pekerjaan?.editText?.text.toString()}
+                            Please review the overtime submission for approval.
+                        """.trimIndent()
+                        val subject = "Sesi Uploaded"
+                        sendEmailToAllAdmins(subject, message)
+                        dismiss()
+                    } else {
+                        val errorMessage = response.errorBody()?.string() ?: "Unknown error"
+                        Log.e("ApiResponse", "Error: ${response.message()} - $errorMessage")
+                    }
                 }
-            }
 
-            override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
-                Log.e("ApiResponse", "Request failed: ${t.message}")
-            }
-        })
+                override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
+                    Log.e("ApiResponse", "Request failed: ${t.message}")
+                }
+            })
+        }
 //        setLoading(false)
     }
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -742,6 +868,7 @@ class PreviewDialogFragment: DialogFragment() {
         lembur = arguments?.getParcelable("lembur")
         izin = arguments?.getParcelable("izin")
         category = arguments?.getString("category")
+        perusahaan?.let { fetchDataFromApi(it.nama) }
         sessionList = arguments?.getParcelableArrayList("lemburList")
         val encryption = BuildConfig.openssl_key
         if (dinas != null) {
@@ -780,25 +907,12 @@ class PreviewDialogFragment: DialogFragment() {
                 view.findViewById<CircularProgressButton>(R.id.acceptButton).setOnClickListener {
                     view.findViewById<CircularProgressButton>(R.id.acceptButton).startAnimation()
                     updateStatus("Accept","Dinas")
-                    sendEmailToAllAdmins(
-                        "Dinas Accepted",
-                        "Your Dinas request has been accepted. Details: \n" +
-                                "Nama: ${dinas?.nama_pekerja}\n" +
-                                "Tanggal Berangkat: $tanggalBerangkatFormatted\n" +
-                                "Tanggal Pulang: $tanggalPulangFormatted\n" +
-                                "Tujuan: ${dinas?.tujuan}\n" +
-                                "Kegiatan: ${dinas?.kegiatan}"
-                    )
-                    dismiss()
+
                 }
 
                 view.findViewById<CircularProgressButton>(R.id.rejectButton).setOnClickListener {
                     view.findViewById<CircularProgressButton>(R.id.acceptButton).startAnimation()
                     updateStatus("Reject","Dinas")
-                    sendEmailToAllAdmins(
-                        "Dinas Accepted",
-                        "Your Dinas request has been rejected. Please contact the HR department for further details."
-                    )
                     dismiss()
                 }
             }else{
@@ -998,7 +1112,7 @@ class PreviewDialogFragment: DialogFragment() {
                 // Update session details when a session is selected from the dropdown
                 acSesi.setOnItemClickListener { _, _, position, _ ->
                     val selectedSession = sessions[position]
-                    val optionLayout = view?.findViewById<LinearLayout>(R.id.option)
+                    val optionLayout = view.findViewById<LinearLayout>(R.id.option)
                     if (position == sessions.size - 1) {
                         optionLayout?.visibility = View.VISIBLE
                         islast = true
@@ -1544,7 +1658,7 @@ class PreviewDialogFragment: DialogFragment() {
         // Log file upload status
         val buktiFile = selectedFile
         val buktiPart = if (buktiFile != null) {
-            val requestFile = RequestBody.create(MediaType.parse("pdf/*"), buktiFile)
+            val requestFile = RequestBody.create("pdf/*".toMediaTypeOrNull(), buktiFile)
             MultipartBody.Part.createFormData("bukti", buktiFile.name, requestFile)
         } else {
             Log.d("UpdateDinas", "No file selected")
@@ -1603,7 +1717,7 @@ class PreviewDialogFragment: DialogFragment() {
         val pekerjaan = createPartFromString(TIkegiatan.editText?.text.toString())
         val buktiFile = selectedFile
         val bukti = if (buktiFile != null) {
-            val requestFile = RequestBody.create(MediaType.parse("image/*"), buktiFile)
+            val requestFile = RequestBody.create("image/*".toMediaTypeOrNull(), buktiFile)
             MultipartBody.Part.createFormData("bukti", buktiFile.name, requestFile)
         } else {
             null
@@ -1652,7 +1766,7 @@ class PreviewDialogFragment: DialogFragment() {
         val alasan = createPartFromString(TIAlasan.editText?.text.toString())
         val buktiFile = selectedFile
         val buktiPart = if (buktiFile != null) {
-            val requestFile = RequestBody.create(MediaType.parse("image/*"), buktiFile)
+            val requestFile = RequestBody.create("image/*".toMediaTypeOrNull(), buktiFile)
             MultipartBody.Part.createFormData("bukti", buktiFile.name, requestFile)
         } else {
             null
@@ -1687,7 +1801,7 @@ class PreviewDialogFragment: DialogFragment() {
         dismiss()
     }
     private fun createPartFromString(value: String): RequestBody {
-        return RequestBody.create(MediaType.parse("text/plain"), value)
+        return RequestBody.create("text/plain".toMediaTypeOrNull(), value)
     }
     private fun setLoading(isLoading: Boolean) {
         val loadingLayout = activity?.findViewById<LinearLayout>(R.id.layout_loading)
@@ -1862,7 +1976,7 @@ class PreviewDialogFragment: DialogFragment() {
             .baseUrl(url)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
-
+        val dateFormatter = SimpleDateFormat("dd MMMM yyyy", Locale("id", "ID"))
         val apiService = retrofit.create(ApiService::class.java)
         val call: Call<ApiResponse> // Declare the call variable outside the if-else statement
         if (category == "Izin") {
@@ -1900,7 +2014,7 @@ class PreviewDialogFragment: DialogFragment() {
                             MotionToast.LONG_DURATION,
                             ResourcesCompat.getFont(requireContext(), R.font.ralewaybold)
                         )
-                    } else {
+                    } else if(category == "Dinas"){
                         MotionToast.createToast(
                             requireActivity(),
                             "Update Dinas Success",
@@ -1910,6 +2024,50 @@ class PreviewDialogFragment: DialogFragment() {
                             MotionToast.LONG_DURATION,
                             ResourcesCompat.getFont(requireContext(), R.font.ralewaybold)
                         )
+                        val tanggalBerangkatFormatted = dateFormatter.format(dinas?.tanggal_berangkat)
+                        val tanggalPulangFormatted = dateFormatter.format(dinas?.tanggal_pulang)
+                        if(status=="Accept"){
+                            sendEmailToPekerja("Dinas Accepted",
+                                "Your Dinas request has been accepted. Details: \n" +
+                                        "Nama: ${dinas?.nama_pekerja}\n" +
+                                        "Tanggal Berangkat: $tanggalBerangkatFormatted\n" +
+                                        "Tanggal Pulang: $tanggalPulangFormatted\n" +
+                                        "Tujuan: ${dinas?.tujuan}\n" +
+                                        "Kegiatan: ${dinas?.kegiatan}")
+                            dismiss()
+                        }else{
+                            sendEmailToPekerja(
+                                "Dinas Accepted",
+                                "Your Dinas request has been rejected. Please contact the HR department for further details."
+                            )
+                        }
+                    }else{
+                        MotionToast.createToast(
+                            requireActivity(),
+                            "Update Dinas Success",
+                            "Silahkan Refresh Halaman",
+                            MotionToastStyle.SUCCESS,
+                            MotionToast.GRAVITY_BOTTOM,
+                            MotionToast.LONG_DURATION,
+                            ResourcesCompat.getFont(requireContext(), R.font.ralewaybold)
+                        )
+                        val tanggalBerangkatFormatted = dateFormatter.format(dinas?.tanggal_berangkat)
+                        val tanggalPulangFormatted = dateFormatter.format(dinas?.tanggal_pulang)
+                        if(status=="Accept"){
+                            sendEmailToPekerja("Dinas Accepted",
+                                "Your Dinas request has been accepted. Details: \n" +
+                                        "Nama: ${dinas?.nama_pekerja}\n" +
+                                        "Tanggal Berangkat: $tanggalBerangkatFormatted\n" +
+                                        "Tanggal Pulang: $tanggalPulangFormatted\n" +
+                                        "Tujuan: ${dinas?.tujuan}\n" +
+                                        "Kegiatan: ${dinas?.kegiatan}")
+                            dismiss()
+                        }else{
+                            sendEmailToPekerja(
+                                "Dinas Accepted",
+                                "Your Dinas request has been rejected. Please contact the HR department for further details."
+                            )
+                        }
                     }
                     dismiss() // Dismiss the dialog after updating the status
                 } else {

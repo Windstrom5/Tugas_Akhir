@@ -54,7 +54,6 @@ import com.windstrom5.tugasakhir.model.Admin
 import com.windstrom5.tugasakhir.model.Pekerja
 import com.windstrom5.tugasakhir.model.Perusahaan
 import de.hdodenhof.circleimageview.CircleImageView
-import eo.view.signalstrength.SignalStrengthView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -108,7 +107,7 @@ class AdminActivity : AppCompatActivity() {
     private lateinit var btnNext2: ImageButton
     private lateinit var pingTextView: TextView
     private lateinit var nama: TextView
-    private lateinit var signalStrengthView: SignalStrengthView
+//    private lateinit var signalStrengthView: SignalStrengthView
     private lateinit var circleImageView: CircleImageView
     private lateinit var address: TextView
     private lateinit var drawerLayout: MIDrawerView
@@ -138,7 +137,7 @@ class AdminActivity : AppCompatActivity() {
             }
         }
         val menuLayout = layoutInflater.inflate(R.layout.menu_layout, null) as RelativeLayout
-        signalStrengthView = menuLayout.findViewById(R.id.signal_strength_view)
+//        signalStrengthView = menuLayout.findViewById(R.id.signal_strength_view)
         laporan = menuLayout.findViewById(R.id.menu_laporan)
         pingTextView = menuLayout.findViewById(R.id.ping_text_view)
         home = menuLayout.findViewById(R.id.menu_home)
@@ -399,10 +398,10 @@ class AdminActivity : AppCompatActivity() {
                             else -> 20           // Weak signal
                         }
                         withContext(Dispatchers.Main) {
-                            signalStrengthView.signalLevel = signalStrength
+//                            signalStrengthView.signalLevel = signalStrength
                             pingTextView.text = " $pingMs ms"
-                            signalStrengthView.color =
-                                ContextCompat.getColor(this@AdminActivity, R.color.colorAccent)
+//                            signalStrengthView.color =
+//                                ContextCompat.getColor(this@AdminActivity, R.color.colorAccent)
                         }
                     } else {
                         Log.e("Pinged", "Error: Received response code $responseCode")
@@ -414,10 +413,10 @@ class AdminActivity : AppCompatActivity() {
                     Log.e("Pinged", "IOException: ${e.message}", e)
                     withContext(Dispatchers.Main) {
                         // Handle UI updates or notifications for offline state
-                        signalStrengthView.signalLevel =
-                            0 // Set signal strength to 0 or indicate offline
+//                        signalStrengthView.signalLevel =
+//                            0 // Set signal strength to 0 or indicate offline
                         pingTextView.text = "Offline" // Update UI to indicate offline status
-                        signalStrengthView.color = Color.RED
+//                        signalStrengthView.color = Color.RED
                     }
                 } catch (e: Exception) {
                     Log.e("Pinged", "Exception: ${e.message}", e)

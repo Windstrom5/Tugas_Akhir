@@ -53,6 +53,7 @@ import com.google.zxing.common.HybridBinarizer
 import com.google.zxing.qrcode.QRCodeReader
 import com.windstrom5.tugasakhir.R
 import com.windstrom5.tugasakhir.activity.UserActivity
+import com.windstrom5.tugasakhir.connection.ApiService
 import com.windstrom5.tugasakhir.connection.SharedPreferencesManager
 import com.windstrom5.tugasakhir.model.Pekerja
 import com.windstrom5.tugasakhir.model.Perusahaan
@@ -61,8 +62,12 @@ import org.json.JSONException
 import org.json.JSONObject
 import com.windstrom5.tugasakhir.connection.Tracking
 import com.windstrom5.tugasakhir.databinding.FragmentScanAbsensiBinding
+import com.windstrom5.tugasakhir.feature.EmailSender
 import com.windstrom5.tugasakhir.feature.QRCodeAnalyzer
 import com.windstrom5.tugasakhir.model.Absen
+import com.windstrom5.tugasakhir.model.Admin
+import com.windstrom5.tugasakhir.model.DinasItem
+import com.windstrom5.tugasakhir.model.IzinItem
 import io.github.g00fy2.quickie.QRResult
 import io.github.g00fy2.quickie.ScanCustomCode
 import io.github.g00fy2.quickie.ScanQRCode
@@ -72,6 +77,13 @@ import nl.dionsegijn.konfetti.core.Party
 import nl.dionsegijn.konfetti.core.Position
 import nl.dionsegijn.konfetti.core.emitter.Emitter
 import nl.dionsegijn.konfetti.xml.KonfettiView
+import okhttp3.ResponseBody
+import org.json.JSONArray
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 import www.sanju.motiontoast.MotionToast
 import www.sanju.motiontoast.MotionToastStyle
 import java.security.MessageDigest
@@ -96,6 +108,7 @@ class ScanAbsensiFragment : Fragment() {
     private var pekerja: Pekerja? = null
     private var latitude: Double = 0.0
     private var longitude: Double = 0.0
+    private var keterangan: String ?= null
     private var codeScanner: CodeScanner? = null
     private lateinit var binding: FragmentScanAbsensiBinding
     private lateinit var viewKonfetti: KonfettiView
@@ -104,6 +117,7 @@ class ScanAbsensiFragment : Fragment() {
     private lateinit var scannerView: CodeScannerView
     private val holidaysMap = mutableMapOf<Calendar, String>()
     private val selectedDays = mutableListOf<String>()
+    private var adminList: List<Admin>? = null
     private val dayTranslations = mapOf(
         "Senin" to "Monday",
         "Selasa" to "Tuesday",
@@ -128,8 +142,13 @@ class ScanAbsensiFragment : Fragment() {
                 if (isTodayHolidayOrSelectedDay()) {
                     Log.d("ScanAbsensiFragment", "Today is a holiday")
                     showHolidayAnimation()
-                } else {
+                } else if(fetchDataIzin()){
+                    showizinAnimation()
+                }else if(fetchDataDinas()){
+                    showdinasAnimation()
+                }else {
                     Log.d("ScanAbsensiFragment", "Starting QR code scanner")
+                    perusahaan?.let { fetchDataFromApi(it.nama) }
                     startCodeScanner()
                 }
             } else {
@@ -196,6 +215,65 @@ class ScanAbsensiFragment : Fragment() {
 //        }
 //    }
 //}
+private fun fetchDataFromApi(namaPerusahaan: String) {
+    val url = "https://selected-jaguar-presently.ngrok-free.app/api/"
+    Log.d("FetchDataError", "Nama: $namaPerusahaan")
+
+    val retrofit = Retrofit.Builder()
+        .baseUrl(url)
+        .addConverterFactory(GsonConverterFactory.create())
+        .build()
+
+    val apiService = retrofit.create(ApiService::class.java)
+
+    val call = apiService.getDataPekerja(namaPerusahaan)
+    call.enqueue(object : Callback<ResponseBody> {
+        override fun onResponse(call: Call<ResponseBody>, response: Response<ResponseBody>) {
+            if (response.isSuccessful) {
+                response.body()?.let { responseBody ->
+                    try {
+                        val responseData = JSONObject(responseBody.string())
+                        val adminArray = responseData.getJSONArray("admin")
+                        // Parse admin and pekerja data
+                        adminList = parseAdminList(adminArray)  // Assign parsed admin list
+                    } catch (e: JSONException) {
+                        Log.e("FetchDataError", "Error parsing JSON: ${e.message}")
+                    }
+                }
+            } else {
+                // Handle unsuccessful response
+                Log.e("FetchDataError", "Failed to fetch data: ${response.code()}")
+            }
+        }
+
+        override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
+            // Handle network failures
+            Log.e("FetchDataError", "Failed to fetch data: ${t.message}")
+        }
+    })
+}
+    private fun parseAdminList(adminArray: JSONArray): List<Admin> {
+        val adminList = mutableListOf<Admin>()
+        for (i in 0 until adminArray.length()) {
+            val adminObject = adminArray.getJSONObject(i)
+            adminList.add(
+                Admin(
+                    adminObject.getInt("id"),
+                    adminObject.getInt("id_perusahaan"),
+                    adminObject.getString("email"),
+                    adminObject.getString("password"),
+                    adminObject.getString("nama"),
+                    parseDate(adminObject.getString("tanggal_lahir")),
+                    adminObject.getString("profile")
+                )
+            )
+        }
+        return adminList
+    }
+    private fun parseDate(dateString: String): Date {
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        return dateFormat.parse(dateString) ?: Date()
+    }
     private fun checkCameraPermissionAndStartScanner() {
         // Check if the camera permission is already granted, if not request it
         if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA)
@@ -256,6 +334,47 @@ class ScanAbsensiFragment : Fragment() {
             playAnimation()
         }
         Toast.makeText(requireContext(), "Today is a holiday. Scanning is disabled.", Toast.LENGTH_LONG).show()
+    }
+
+    private fun showizinAnimation() {
+        // Stop scanning and show holiday animation
+        codeScanner?.stopPreview()
+        scannerView.visibility = View.GONE
+        lottie.apply {
+            repeatCount = LottieDrawable.INFINITE
+            setAnimation(R.raw.izin)
+            visibility = View.VISIBLE
+            playAnimation()
+        }
+        val messages = mapOf(
+            "Sakit" to "Semoga cepat sembuh dan dapat kembali bekerja dengan sehat!",
+            "Cuti" to "Selamat menikmati cuti! Kami menunggu kehadiran Anda kembali.",
+            "Izin Khusus" to "Izin khusus telah diterima. Pastikan semua keperluan Anda terpenuhi.",
+            "Pendidikan" to "Semoga kegiatan pendidikan Anda berjalan lancar!",
+            "Liburan" to "Selamat menikmati liburan! Jangan lupa untuk beristirahat.",
+            "Keperluan Pribadi" to "Semoga semua keperluan pribadi Anda terselesaikan dengan baik.",
+            "Kegiatan Keluarga" to "Semoga kegiatan keluarga Anda berjalan dengan lancar!",
+            "Ibadah" to "Semoga ibadah Anda diterima dan membawa berkah."
+        )
+        val message = messages[keterangan] ?: "Kategori tidak diketahui."
+        textView.text = message
+        Toast.makeText(requireContext(), "Today is your off day. Scanning is disabled.", Toast.LENGTH_LONG).show()
+    }
+
+    private fun showdinasAnimation() {
+        // Stop scanning and show holiday animation
+        codeScanner?.stopPreview()
+        scannerView.visibility = View.GONE
+        lottie.apply {
+            repeatCount = LottieDrawable.INFINITE
+            setAnimation(R.raw.dinas)
+            visibility = View.VISIBLE
+            playAnimation()
+        }
+        textView.text = "Semoga perjalanan dinas Anda ke $keterangan lancar"
+
+
+        Toast.makeText(requireContext(), "Today is your off day. Scanning is disabled.", Toast.LENGTH_LONG).show()
     }
 
     override fun onResume() {
@@ -352,6 +471,117 @@ class ScanAbsensiFragment : Fragment() {
 
         // Return true if today is either a company holiday or a national holiday
         return isHoliday || isNationalHoliday || isCompanyHoliday
+    }
+    private fun isDateToday(date: Date): Boolean {
+        val today = Calendar.getInstance()
+        val givenDate = Calendar.getInstance()
+        givenDate.time = date
+        return today.get(Calendar.YEAR) == givenDate.get(Calendar.YEAR) &&
+                today.get(Calendar.DAY_OF_YEAR) == givenDate.get(Calendar.DAY_OF_YEAR)
+    }
+
+    private fun fetchDataIzin():Boolean {
+        var isTodayMatched = false
+        val url = "https://selected-jaguar-presently.ngrok-free.app/api/"
+        val retrofit = Retrofit.Builder()
+            .baseUrl(url)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+        val apiService = retrofit.create(ApiService::class.java)
+        val call = perusahaan?.let { pekerja?.let { it1 -> apiService.getDataIzinPekerja(it.nama, it1.nama) } }
+        call?.enqueue(object : Callback<ResponseBody> {
+            override fun onResponse(call: Call<ResponseBody>, response: Response<ResponseBody>) {
+                if (response.isSuccessful) {
+                    response.body()?.let { responseBody ->
+                        try {
+                            val jsonResponse = responseBody.string()
+                            val responseData = JSONObject(jsonResponse)
+                            val dataArray = responseData.getJSONArray("data")
+                            val statusWithIzinMap = mutableMapOf<String, MutableList<IzinItem>>()
+                            var hasTodayData = false
+
+                            for (i in 0 until dataArray.length()) {
+                                val jsonObject = dataArray.getJSONObject(i)
+                                val status = jsonObject.getString("status")
+                                val tanggal = parseDate(jsonObject.getString("tanggal"))
+                                // Check if today's date matches
+                                if (isDateToday(tanggal) && status == "Accept") {
+                                    keterangan = jsonObject.getString("kategori")
+                                    isTodayMatched = true
+                                    break
+                                }
+                            }
+
+                            // Call holiday logic if data matches today
+                            if (hasTodayData) {
+                                isTodayHolidayOrSelectedDay()
+                            }else{
+
+                            }
+
+                            // Remaining code...
+                        } catch (e: JSONException) {
+                            Log.e("FetchDataError", "Error parsing JSON: ${e.message}")
+                        }
+                    }
+                } else {
+                    Log.e("FetchDataError", "Failed to fetch data: ${response.code()}")
+                }
+            }
+
+            override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
+                Log.e("FetchDataError", "Failed to fetch data: ${t.message}")
+            }
+        })
+        return isTodayMatched
+    }
+    private fun fetchDataDinas():Boolean {
+        var isTodayMatched = false
+        val url = "https://selected-jaguar-presently.ngrok-free.app/api/"
+        val retrofit = Retrofit.Builder()
+            .baseUrl(url)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+        val apiService = retrofit.create(ApiService::class.java)
+        val call = perusahaan?.let { pekerja?.let { it1 -> apiService.getDataDinasPekerja(it.nama, it1.nama) } }
+        call?.enqueue(object : Callback<ResponseBody> {
+            override fun onResponse(call: Call<ResponseBody>, response: Response<ResponseBody>) {
+                if (response.isSuccessful) {
+                    response.body()?.let { responseBody ->
+                        try {
+                            val jsonResponse = responseBody.string()
+                            val responseData = JSONObject(jsonResponse)
+                            val dataArray = responseData.getJSONArray("data")
+                            val today = Calendar.getInstance().time
+                            for (i in 0 until dataArray.length()) {
+                                val jsonObject = dataArray.getJSONObject(i)
+                                val tanggalBerangkat = parseDate(jsonObject.getString("tanggal_berangkat"))
+                                val tanggalPulang = parseDate(jsonObject.getString("tanggal_pulang"))
+                                val status = jsonObject.getString("status")
+
+                                // Check if today's date is between tanggal_berangkat and tanggal_pulang
+                                if (tanggalBerangkat <= today && today <= tanggalPulang && status == "Accept") {
+                                    isTodayMatched = true
+                                    keterangan = jsonObject.getString("tujuan")
+                                    break // No need to continue checking
+                                }
+                            }
+
+                            // Remaining code...
+                        } catch (e: JSONException) {
+                            Log.e("FetchDataError", "Error parsing JSON: ${e.message}")
+                        }
+                    }
+                } else {
+                    Log.e("FetchDataError", "Failed to fetch data: ${response.code()}")
+                }
+            }
+
+            override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
+                Log.e("FetchDataError", "Failed to fetch data: ${t.message}")
+            }
+        })
+        return isTodayMatched
     }
 
     private fun isTodayNationalHoliday(): Boolean {
@@ -496,124 +726,152 @@ class ScanAbsensiFragment : Fragment() {
         requireContext().stopService(trackingIntent)
     }
     // Check and request location permission
-    private fun Presensi(perusahaan: Perusahaan, pekerja: Pekerja){
-        val url = "https://selected-jaguar-presently.ngrok-free.app/api/Presensi/Absensi"
-        Log.d("testing",url)
-        val calendar = Calendar.getInstance()
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-        val currentDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(calendar.time)
-        val currentTime = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(calendar.time)
-        val params = JSONObject()
-        val parsedDate: Date = dateFormat.parse(currentDate)
-        params.put("nama", pekerja.nama)
-        params.put("perusahaan", perusahaan.nama)
-        params.put("tanggal", currentDate)
-        params.put("jam", currentTime)
-        params.put("latitude", latitude)
-        params.put("longitude", longitude)
-        Log.d("testing",params.toString())
-        val request = JsonObjectRequest(
-            Request.Method.POST, url, params,
-            { response ->
-                Log.d("testing",url)
-                try {
-                    val message = response.getString("message")
-                    // Process the status and message accordingly
-                    when (message) {
-                        "Absen Started" -> {
-                            val absen = perusahaan.id?.let {
-                                pekerja.id?.let { it1 ->
-                                    Absen(
-                                        null,
-                                        it1,
-                                        it,
-                                        parsedDate,
-                                        currentTime,
-                                        null.toString(),
-                                        latitude,
-                                        longitude)
+        private fun Presensi(perusahaan: Perusahaan, pekerja: Pekerja){
+            val url = "https://selected-jaguar-presently.ngrok-free.app/api/Presensi/Absensi"
+            Log.d("testing",url)
+            val calendar = Calendar.getInstance()
+            val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+            val currentDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(calendar.time)
+            val currentTime = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(calendar.time)
+            val params = JSONObject()
+            val parsedDate: Date = dateFormat.parse(currentDate)
+            params.put("nama", pekerja.nama)
+            params.put("perusahaan", perusahaan.nama)
+            params.put("tanggal", currentDate)
+            params.put("jam", currentTime)
+            params.put("latitude", latitude)
+            params.put("longitude", longitude)
+            Log.d("testing",params.toString())
+            val request = JsonObjectRequest(
+                Request.Method.POST, url, params,
+                { response ->
+                    Log.d("testing",url)
+                    try {
+                        val message = response.getString("message")
+                        // Process the status and message accordingly
+                        when (message) {
+                            "Absen Started" -> {
+                                val absen = perusahaan.id?.let {
+                                    pekerja.id?.let { it1 ->
+                                        Absen(
+                                            null,
+                                            it1,
+                                            it,
+                                            parsedDate,
+                                            currentTime,
+                                            null.toString(),
+                                            latitude,
+                                            longitude)
+                                    }
+                                }
+                                val sharedPreferencesManager = SharedPreferencesManager(requireContext())
+                                if (absen != null) {
+                                    sharedPreferencesManager.savePresensi(absen)
+                                }
+                                Log.d("testing3", "Done")
+                                val startServiceIntent = Intent(requireActivity(), Tracking::class.java)
+                                startServiceIntent.putExtra("perusahaan", perusahaan)
+                                startServiceIntent.putExtra("pekerja", pekerja)
+                                startTrackingService()
+                                requireActivity().runOnUiThread {
+                                    val party = Party(
+                                        speed = 0f,
+                                        maxSpeed = 30f,
+                                        damping = 0.9f,
+                                        spread = 360,
+                                        colors = listOf(0xfce18a, 0xff726d, 0xf4306d, 0xb48def),
+                                        position = Position.Relative(0.5, 0.3),
+                                        emitter = Emitter(duration = 100, TimeUnit.MILLISECONDS).max(100)
+                                    )
+                                    viewKonfetti.start(party)
+                                    MotionToast.createToast(
+                                        requireActivity(),
+                                            "Absen Started",
+                                            "Happy Working",
+                                        MotionToastStyle.SUCCESS,
+                                        MotionToast.GRAVITY_BOTTOM,
+                                        MotionToast.LONG_DURATION,
+                                        ResourcesCompat.getFont(
+                                            requireContext(),
+                                            R.font.ralewaybold
+                                        )
+                                    )
+                                    sendEmailToAllAdmins(
+                                        subject = "Employee Check-In Notification",
+                                        message = """
+                            Notification: Employee Check-In
+
+                            Employee Name: ${pekerja.nama}
+                            Company: ${perusahaan.nama}
+                            Date: $currentDate
+                            Check-in Time: $currentTime
+                            Location: [$latitude, $longitude]
+                            
+                            The employee has checked in. Please monitor attendance and ensure compliance.
+                        """.trimIndent()
+                                    )
+                                    textView.setTextAlignment(View.TEXT_ALIGNMENT_CENTER)
+                                    textView.setText("Happy Working. \nCome Back When It Already Closed Time")
+                                    codeScanner?.stopPreview()
+                                    scannerView.visibility = View.GONE
+                                    lottie.repeatCount = LottieDrawable.INFINITE
+                                    lottie.visibility = View.VISIBLE
+                                    lottie.playAnimation()
                                 }
                             }
-                            val sharedPreferencesManager = SharedPreferencesManager(requireContext())
-                            if (absen != null) {
-                                sharedPreferencesManager.savePresensi(absen)
-                            }
-                            Log.d("testing3", "Done")
-                            val startServiceIntent = Intent(requireActivity(), Tracking::class.java)
-                            startServiceIntent.putExtra("perusahaan", perusahaan)
-                            startServiceIntent.putExtra("pekerja", pekerja)
-                            startTrackingService()
-                            requireActivity().runOnUiThread {
-                                val party = Party(
-                                    speed = 0f,
-                                    maxSpeed = 30f,
-                                    damping = 0.9f,
-                                    spread = 360,
-                                    colors = listOf(0xfce18a, 0xff726d, 0xf4306d, 0xb48def),
-                                    position = Position.Relative(0.5, 0.3),
-                                    emitter = Emitter(duration = 100, TimeUnit.MILLISECONDS).max(100)
-                                )
-                                viewKonfetti.start(party)
-                                MotionToast.createToast(
-                                    requireActivity(),
-                                    "Absen Startrd",
-                                    "Happy Working",
-                                    MotionToastStyle.SUCCESS,
-                                    MotionToast.GRAVITY_BOTTOM,
-                                    MotionToast.LONG_DURATION,
-                                    ResourcesCompat.getFont(
-                                        requireContext(),
-                                        R.font.ralewaybold
-                                    )
-                                )
-                                textView.setTextAlignment(View.TEXT_ALIGNMENT_CENTER)
-                                textView.setText("Happy Working. \nCome Back When It Already Closed Time")
-                                codeScanner?.stopPreview()
-                                scannerView.visibility = View.GONE
-                                lottie.repeatCount = LottieDrawable.INFINITE
-                                lottie.visibility = View.VISIBLE
-                                lottie.playAnimation()
-                            }
-                        }
 
-                        "Absen Ended" -> {
-                            Log.d("testing2",url)
-                            stopTrackingService()
-                            requireActivity().runOnUiThread {
-                                val party = Party(
-                                    speed = 0f,
-                                    maxSpeed = 30f,
-                                    damping = 0.9f,
-                                    spread = 360,
-                                    colors = listOf(0xfce18a, 0xff726d, 0xf4306d, 0xb48def),
-                                    position = Position.Relative(0.5, 0.3),
-                                    emitter = Emitter(duration = 100, TimeUnit.MILLISECONDS).max(100)
-                                )
-                                viewKonfetti.start(party)
-                                val sharedPreferencesManager = SharedPreferencesManager(requireContext())
-                                sharedPreferencesManager.removePresensi()
-                                MotionToast.createToast(
-                                    requireActivity(),
-                                    "Absen Completed",
-                                    "Have A Nice Day",
-                                    MotionToastStyle.SUCCESS,
-                                    MotionToast.GRAVITY_BOTTOM,
-                                    MotionToast.LONG_DURATION,
-                                    ResourcesCompat.getFont(
-                                        requireContext(),
-                                        R.font.ralewaybold
+                            "Absen Ended" -> {
+                                Log.d("testing2",url)
+                                stopTrackingService()
+                                requireActivity().runOnUiThread {
+                                    val party = Party(
+                                        speed = 0f,
+                                        maxSpeed = 30f,
+                                        damping = 0.9f,
+                                        spread = 360,
+                                        colors = listOf(0xfce18a, 0xff726d, 0xf4306d, 0xb48def),
+                                        position = Position.Relative(0.5, 0.3),
+                                        emitter = Emitter(duration = 100, TimeUnit.MILLISECONDS).max(100)
                                     )
-                                )
-                                textView.setTextAlignment(View.TEXT_ALIGNMENT_CENTER)
-                                textView.setText("Thank You For Your Hard Work Today ${pekerja.nama}")
-                                codeScanner?.stopPreview()
-                                scannerView.visibility = View.GONE
-                                lottie.setAnimation(R.raw.done)
-                                lottie.repeatCount = LottieDrawable.INFINITE
-                                lottie.visibility = View.VISIBLE
-                                lottie.playAnimation() // Start the animation
+                                    viewKonfetti.start(party)
+                                    val sharedPreferencesManager = SharedPreferencesManager(requireContext())
+                                    sharedPreferencesManager.removePresensi()
+                                    MotionToast.createToast(
+                                        requireActivity(),
+                                        "Absen Completed",
+                                        "Have A Nice Day",
+                                        MotionToastStyle.SUCCESS,
+                                        MotionToast.GRAVITY_BOTTOM,
+                                        MotionToast.LONG_DURATION,
+                                        ResourcesCompat.getFont(
+                                            requireContext(),
+                                            R.font.ralewaybold
+                                        )
+                                    )
+                                    sendEmailToAllAdmins(
+                                        subject = "Employee Check-Out Notification",
+                                        message = """
+                            Notification: Employee Check-Out
+
+                            Employee Name: ${pekerja.nama}
+                            Company: ${perusahaan.nama}
+                            Date: $currentDate
+                            Check-out Time: $currentTime
+                            Location: [$latitude, $longitude]
+                            
+                            The employee has checked out. Please review attendance records.
+                        """.trimIndent()
+                                    )
+                                    textView.setTextAlignment(View.TEXT_ALIGNMENT_CENTER)
+                                    textView.setText("Thank You For Your Hard Work Today ${pekerja.nama}")
+                                    codeScanner?.stopPreview()
+                                    scannerView.visibility = View.GONE
+                                    lottie.setAnimation(R.raw.done)
+                                    lottie.repeatCount = LottieDrawable.INFINITE
+                                    lottie.visibility = View.VISIBLE
+                                    lottie.playAnimation() // Start the animation
+                                }
                             }
-                        }
                         else -> {
                             Log.d("testing1",url)
                             requireActivity().runOnUiThread {
@@ -647,7 +905,12 @@ class ScanAbsensiFragment : Fragment() {
         )
         requestQueue.add(request)
     }
-
+    private fun sendEmailToAllAdmins(subject: String, message: String) {
+        adminList?.forEach { admin ->
+            val receiverEmail = admin.email
+            EmailSender.sendEmail(receiverEmail, subject, message)
+        }
+    }
     private fun md5(input: String): String {
         val md = MessageDigest.getInstance("MD5")
         val digest = md.digest(input.toByteArray())

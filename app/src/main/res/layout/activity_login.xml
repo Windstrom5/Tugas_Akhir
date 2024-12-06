@@ -176,7 +176,7 @@
 <!--                                android:visibility="gone" />-->
 <!--                        </LinearLayout>-->
 <!--                    </androidx.cardview.widget.CardView>-->
-                    <br.com.simplepass.loading_button_lib.customViews.CircularProgressButton
+                    <br.com.simplepass.loadingbutton.customViews.CircularProgressButton
                         android:id="@+id/cirLoginButton"
                         style="@style/loginButton"
                         android:layout_gravity="center_horizontal"

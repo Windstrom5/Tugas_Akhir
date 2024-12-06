@@ -116,30 +116,30 @@ class ShowQRCodeFragment : Fragment() {
     }
 
 
-    private fun saveBitmapToGallery(bitmap: Bitmap, fileName: String) {
-        val resolver = requireContext().contentResolver
+        private fun saveBitmapToGallery(bitmap: Bitmap, fileName: String) {
+            val resolver = requireContext().contentResolver
 
-        // Create a new image file in the Pictures directory
-        val imageCollection = MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
-        val newImage = ContentValues().apply {
-            put(MediaStore.Images.Media.DISPLAY_NAME, "$fileName.png")
-            put(MediaStore.Images.Media.MIME_TYPE, "image/png")
-            put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES)
-        }
-
-        val imageUri = resolver.insert(imageCollection, newImage)
-
-        // Write the bitmap to the output stream
-        try {
-            resolver.openOutputStream(imageUri!!)?.use { outputStream ->
-                bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
-                Toast.makeText(requireContext(), "QR code saved to gallery", Toast.LENGTH_SHORT).show()
+            // Create a new image file in the Pictures directory
+            val imageCollection = MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+            val newImage = ContentValues().apply {
+                put(MediaStore.Images.Media.DISPLAY_NAME, "$fileName.png")
+                put(MediaStore.Images.Media.MIME_TYPE, "image/png")
+                put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES)
             }
-        } catch (e: IOException) {
-            e.printStackTrace()
-            Toast.makeText(requireContext(), "Failed to save QR code", Toast.LENGTH_SHORT).show()
+
+            val imageUri = resolver.insert(imageCollection, newImage)
+
+            // Write the bitmap to the output stream
+            try {
+                resolver.openOutputStream(imageUri!!)?.use { outputStream ->
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+                    Toast.makeText(requireContext(), "QR code saved to gallery", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: IOException) {
+                e.printStackTrace()
+                Toast.makeText(requireContext(), "Failed to save QR code", Toast.LENGTH_SHORT).show()
+            }
         }
-    }
     private fun generateQRCode(data: String): Bitmap {
         val size = 512 // size of the QR code
         val bits = QRCodeWriter().encode(data, BarcodeFormat.QR_CODE, size, size)
@@ -194,16 +194,20 @@ class ShowQRCodeFragment : Fragment() {
         val centerY = (qrCodeBitmap.height - resizedLogo.height) / 2
 
         // Create a new bitmap with the QR code and the logo at the center
-        val finalBitmap = Bitmap.createBitmap(
-            qrCodeBitmap.width,
-            qrCodeBitmap.height,
-            qrCodeBitmap.config // Access config through Bitmap.Config
-        )
+        val finalBitmap = qrCodeBitmap.config?.let {
+            Bitmap.createBitmap(
+                qrCodeBitmap.width,
+                qrCodeBitmap.height,
+                it // Access config through Bitmap.Config
+            )
+        }
 
-        val canvas = android.graphics.Canvas(finalBitmap)
-        canvas.drawBitmap(qrCodeBitmap, 0f, 0f, null)
-        canvas.drawBitmap(resizedLogo, centerX.toFloat(), centerY.toFloat(), null)
+        val canvas = finalBitmap?.let { android.graphics.Canvas(it) }
+        if (canvas != null) {
+            canvas.drawBitmap(qrCodeBitmap, 0f, 0f, null)
+            canvas.drawBitmap(resizedLogo, centerX.toFloat(), centerY.toFloat(), null)
 
+        }
         imageViewQRCode.setImageBitmap(finalBitmap)
     }
 

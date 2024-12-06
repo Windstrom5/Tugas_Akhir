@@ -235,7 +235,7 @@
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
                     android:layout_marginTop="16dp">
-                    <br.com.simplepass.loading_button_lib.customViews.CircularProgressButton
+                    <br.com.simplepass.loadingbutton.customViews.CircularProgressButton
                         android:id="@+id/acceptButton"
                         android:layout_width="0dp"
                         android:backgroundTint="@color/green"
@@ -245,7 +245,7 @@
                         android:textStyle="bold"
                         android:layout_margin="10dp"
                         android:text="Accept"/>
-                    <br.com.simplepass.loading_button_lib.customViews.CircularProgressButton
+                    <br.com.simplepass.loadingbutton.customViews.CircularProgressButton
                         android:id="@+id/rejectButton"
                         android:layout_width="0dp"
                         android:layout_weight="1"

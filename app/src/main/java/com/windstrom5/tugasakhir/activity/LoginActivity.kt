@@ -20,11 +20,12 @@ import android.widget.LinearLayout
 import android.widget.PopupWindow
 import android.widget.ProgressBar
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
-import br.com.simplepass.loading_button_lib.customViews.CircularProgressButton
+import br.com.simplepass.loadingbutton.customViews.CircularProgressButton
 import com.android.volley.Request
 import com.android.volley.toolbox.JsonObjectRequest
 import com.android.volley.toolbox.Volley
@@ -344,6 +345,17 @@ class LoginActivity : AppCompatActivity() {
                         sharedPreferencesManager.clearUserData()
                         Log.d("Role",role)
                         if (role == "Admin") {
+                            if(user.getString("is_verify") == "false"){
+                                MotionToast.createToast(this@LoginActivity, "Error",
+                                    "Email Belum Terverifikasi",
+                                    MotionToastStyle.ERROR,
+                                    MotionToast.GRAVITY_BOTTOM,
+                                    MotionToast.LONG_DURATION,
+                                    ResourcesCompat.getFont(this@LoginActivity, R.font.ralewaybold))
+                                login.revertAnimation()
+                                // End the function execution
+                                return@JsonObjectRequest
+                            }
                             val admin = Admin(
                                 user.getInt("id"),
                                 user.getInt("id_perusahaan"),
@@ -360,7 +372,7 @@ class LoginActivity : AppCompatActivity() {
                                 longitude,
                                 jam_masuk,
                                 jam_keluar,
-                                sqlDate,
+                                sqlDate,    
                                 logo,
                                 secretKey,
                                 holiday
@@ -368,7 +380,9 @@ class LoginActivity : AppCompatActivity() {
                             setLoading(false)
                             val vectorDrawable = ContextCompat.getDrawable(this@LoginActivity, R.drawable.done_bitmap)
                             val bitmap = vectorDrawable?.let { vectorToBitmap(it) }
-                            login.doneLoadingAnimation(Color.parseColor("#AAFF00"), bitmap)
+                            if (bitmap != null) {
+                                login.doneLoadingAnimation(Color.parseColor("#AAFF00"), bitmap)
+                            }
 //                            if (rememberMeChecked) {
                                 sharedPreferencesManager.saveAdmin(admin)
                                 sharedPreferencesManager.savePerusahaan(perusahaan)
@@ -383,7 +397,9 @@ class LoginActivity : AppCompatActivity() {
                         } else {
                             val vectorDrawable = ContextCompat.getDrawable(this@LoginActivity, R.drawable.done_bitmap)
                             val bitmap = vectorDrawable?.let { vectorToBitmap(it) }
-                            login.doneLoadingAnimation(Color.parseColor("#AAFF00"), bitmap)
+                            if (bitmap != null) {
+                                login.doneLoadingAnimation(Color.parseColor("#AAFF00"), bitmap)
+                            }
                             val perusahaan = Perusahaan(
                                 id,
                                 nama,

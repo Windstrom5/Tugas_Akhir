@@ -42,10 +42,12 @@ import com.windstrom5.tugasakhir.model.Pekerja
 import com.windstrom5.tugasakhir.model.Perusahaan
 import de.hdodenhof.circleimageview.CircleImageView
 import okhttp3.MediaType
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import retrofit2.Call
 import retrofit2.Callback
+import retrofit2.HttpException
 import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -53,6 +55,7 @@ import www.sanju.motiontoast.MotionToast
 import www.sanju.motiontoast.MotionToastStyle
 import java.io.File
 import java.io.FileOutputStream
+import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -134,7 +137,7 @@ class EditUserActivity : AppCompatActivity() {
         }
     }
     private fun createPartFromString(value: String): RequestBody {
-        return RequestBody.create(MediaType.parse("text/plain"), value)
+        return RequestBody.create("text/plain".toMediaTypeOrNull(), value)
     }
     private fun updateDataUser(Id: Int) {
         val url = "https://selected-jaguar-presently.ngrok-free.app/api/"
@@ -155,7 +158,7 @@ class EditUserActivity : AppCompatActivity() {
 //        if (selectedFile != null) {
         val profilePath = selectedFile
             val profilePart = if (profilePath != null) {
-                val requestFile = RequestBody.create(MediaType.parse("image/*"), profilePath)
+                val requestFile = RequestBody.create("image/*".toMediaTypeOrNull(), profilePath)
                 MultipartBody.Part.createFormData("profile", profilePath.name, requestFile)
             } else {
                 null
@@ -231,7 +234,33 @@ class EditUserActivity : AppCompatActivity() {
             }
 
             override fun onFailure(call: Call<ApiResponse>, t: Throwable) {
-                Log.e("ApiResponse", "Request failed: ${t.message}")
+                when (t) {
+                    is IOException -> {
+                        // No internet connection on the device
+                        Toast.makeText(
+                            this@EditUserActivity,
+                            "No internet connection. Please check your network and try again.",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                    is HttpException -> {
+                        // Server is reachable, but there’s an issue on the server
+                        val statusCode = t.code()
+                        Toast.makeText(
+                            this@EditUserActivity,
+                            "Server error (code: $statusCode). Please try again later.",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                    else -> {
+                        // General error
+                        Toast.makeText(
+                            this@EditUserActivity,
+                            "Request failed: ${t.message}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
                 setLoading(false)
             }
         })

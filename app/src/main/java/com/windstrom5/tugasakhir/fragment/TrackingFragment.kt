@@ -43,9 +43,11 @@ import org.json.JSONArray
 import org.json.JSONException
 import retrofit2.Call
 import retrofit2.Callback
+import retrofit2.HttpException
 import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.io.IOException
 import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.time.LocalDateTime
@@ -158,8 +160,33 @@ class TrackingFragment : Fragment() {
                     }
 
                     override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
-                        // Handle network failures
-                        Log.e("FetchDataError", "Failed to fetch data: ${t.message}")
+                        when (t) {
+                            is IOException -> {
+                                // No internet connection on the device
+                                Toast.makeText(
+                                    requireContext(),
+                                    "No internet connection. Please check your network and try again.",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
+                            is HttpException -> {
+                                // Server is reachable, but there’s an issue on the server
+                                val statusCode = t.code()
+                                Toast.makeText(
+                                    requireContext(),
+                                    "Server error (code: $statusCode). Please try again later.",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
+                            else -> {
+                                // General error
+                                Toast.makeText(
+                                    requireContext(),
+                                    "Request failed: ${t.message}",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
+                        }
                     }
                 })
 

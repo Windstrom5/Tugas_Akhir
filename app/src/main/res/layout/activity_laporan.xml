@@ -264,7 +264,7 @@
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <br.com.simplepass.loading_button_lib.customViews.CircularProgressButton
+            <br.com.simplepass.loadingbutton.customViews.CircularProgressButton
                 android:id="@+id/create"
                 style="@style/loginButton"
                 android:layout_gravity="center_horizontal"
@@ -308,7 +308,7 @@
                         android:textColor="@color/black"
                         android:text="Data Not Found"
                         android:visibility="gone"/>
-                    <com.github.aachartmodel.aainfographics.aachartcreator.AAChartView
+                    <com.github.AAChartModel.AAChartCore.AAChartCreator.AAChartView
                         android:id="@+id/barChart"
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"

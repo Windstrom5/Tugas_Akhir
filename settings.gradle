@@ -10,18 +10,16 @@ pluginManagement {
                 password = "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"
             }
         }
-        maven { url = uri("https://jitpack.io") } // Add JitPack repository
+        maven { url 'https://jitpack.io' }
     }
 }
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         google()
-        mavenCentral()
         gradlePluginPortal()
-        maven {
-            url = uri("https://jitpack.io")
-        }
+        mavenCentral()
+        maven { url 'https://jitpack.io' }
     }
 }
 

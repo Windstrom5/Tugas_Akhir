@@ -49,7 +49,6 @@ import com.windstrom5.tugasakhir.feature.Post
 import com.windstrom5.tugasakhir.model.Pekerja
 import com.windstrom5.tugasakhir.model.Perusahaan
 import de.hdodenhof.circleimageview.CircleImageView
-import eo.view.signalstrength.SignalStrengthView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -100,7 +99,6 @@ class UserActivity : AppCompatActivity() {
     private lateinit var btnNext2: ImageButton
     private lateinit var pingTextView: TextView
     private lateinit var nama: TextView
-    private lateinit var signalStrengthView: SignalStrengthView
     private lateinit var circleImageView: CircleImageView
     private lateinit var address:TextView
     private lateinit var drawerLayout: MIDrawerView
@@ -128,7 +126,7 @@ class UserActivity : AppCompatActivity() {
             }
         }
         val menuLayout = layoutInflater.inflate(R.layout.menu_layout, null) as RelativeLayout
-        signalStrengthView = menuLayout.findViewById(R.id.signal_strength_view)
+
         laporan = menuLayout.findViewById(R.id.menu_laporan)
         pingTextView = menuLayout.findViewById(R.id.ping_text_view)
         home= menuLayout.findViewById(R.id.menu_home)
@@ -269,9 +267,7 @@ class UserActivity : AppCompatActivity() {
                     if (responseCode == HttpURLConnection.HTTP_NOT_FOUND) {
                         Log.e("Pinged", "Error: Server offline or ngrok tunnel not found (404)")
                         withContext(Dispatchers.Main) {
-                            signalStrengthView.signalLevel = 0
                             pingTextView.text = "Offline - Server not found"
-                            signalStrengthView.color = Color.RED
                         }
                     } else if (responseCode == HttpURLConnection.HTTP_OK) {
                         val response = StringBuilder()
@@ -293,16 +289,12 @@ class UserActivity : AppCompatActivity() {
                             else -> 20           // Weak signal
                         }
                         withContext(Dispatchers.Main) {
-                            signalStrengthView.signalLevel = signalStrength
                             pingTextView.text = " $pingMs ms"
-                            signalStrengthView.color = ContextCompat.getColor(this@UserActivity, R.color.colorAccent)
                         }
                     } else {
                         Log.e("Pinged", "Error: Received response code $responseCode")
                         withContext(Dispatchers.Main) {
-                            signalStrengthView.signalLevel = 0
                             pingTextView.text = "Offline - Server error"
-                            signalStrengthView.color = Color.RED
                         }
                     }
 
@@ -312,9 +304,7 @@ class UserActivity : AppCompatActivity() {
                     Log.e("Pinged", "IOException: ${e.message}", e)
                     withContext(Dispatchers.Main) {
                         // Handle UI updates or notifications for offline state
-                        signalStrengthView.signalLevel = 0 // Set signal strength to 0 or indicate offline
                         pingTextView.text = "Offline - No Connection" // Update UI to indicate offline status
-                        signalStrengthView.color = Color.RED
                     }
                 } catch (e: Exception) {
                     Log.e("Pinged", "Exception: ${e.message}", e)

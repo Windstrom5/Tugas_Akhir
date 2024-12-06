@@ -42,6 +42,7 @@ import com.windstrom5.tugasakhir.model.perusahaancreate
 import com.windstrom5.tugasakhir.model.response
 import de.hdodenhof.circleimageview.CircleImageView
 import okhttp3.MediaType
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import org.json.JSONObject
@@ -248,7 +249,7 @@ class RegisterPekerjaActivity : AppCompatActivity() {
         val tanggalRequestBody = createPartFromString(selectedDateSqlFormat.toString())
         val profilePath = selectedFile
         val profilePart = if (profilePath != null) {
-            val requestFile = RequestBody.create(MediaType.parse("image/*"), profilePath)
+            val requestFile = RequestBody.create("image/*".toMediaTypeOrNull(), profilePath)
             MultipartBody.Part.createFormData("profile", profilePath.name, requestFile)
         } else {
             null
@@ -356,7 +357,7 @@ class RegisterPekerjaActivity : AppCompatActivity() {
     }
 
     private fun createPartFromString(value: String): RequestBody {
-        return RequestBody.create(MediaType.parse("text/plain"), value)
+        return RequestBody.create("text/plain".toMediaTypeOrNull(), value)
     }
 
     private fun openFilePicker() {

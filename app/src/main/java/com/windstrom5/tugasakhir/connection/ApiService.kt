@@ -39,7 +39,7 @@ interface ApiService {
         @Part("password") password: RequestBody,
         @Part("nama") nama: RequestBody,
         @Part("tanggal_lahir") tanggal_lahir: RequestBody,
-        @Part profilePart: MultipartBody.Part?
+        @Part profile: MultipartBody.Part?
     ): Call<ApiResponse>
 
     @Multipart
