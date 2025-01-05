@@ -52,7 +52,6 @@ import com.windstrom5.tugasakhir.model.historyLembur
 import com.windstrom5.tugasakhir.model.session_lembur
 import de.hdodenhof.circleimageview.CircleImageView
 import okhttp3.ResponseBody
-import org.apache.commons.lang3.time.DateUtils.parseDate
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -64,7 +63,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import www.sanju.motiontoast.MotionToast
 import www.sanju.motiontoast.MotionToastStyle
-import java.sql.Date
+import java.util.Date
 import java.sql.Time
 import java.text.ParseException
 import java.text.SimpleDateFormat
@@ -352,7 +351,6 @@ class LaporanActivity : AppCompatActivity() {
         if (perusahaan?.holiday?.contains("Nasional") == true) {
             fetchHolidayData()
         }
-
         // Calculate the total valid days in the selected month
         val totalDaysInMonth = getTotalValidDaysInMonth(selectedMonth, selectedYear)
 
@@ -366,7 +364,6 @@ class LaporanActivity : AppCompatActivity() {
 
             val isMonthMatch = selectedMonth == null || selectedMonth == presensiMonth
             val isYearMatch = selectedYear == null || selectedYear == presensiYear
-
             isMonthMatch && isYearMatch
         }
 
@@ -420,22 +417,29 @@ class LaporanActivity : AppCompatActivity() {
 
     // Helper function to get total valid days in the selected month excluding holidays and specified weekdays
     private fun getTotalValidDaysInMonth(selectedMonth: Int?, selectedYear: Int?): Int {
-        val totalDaysInMonth =
-            31 // Change this if necessary; it will be adjusted based on actual month days
+        // Adjust to dynamically fetch the total days in the month
+        val calendar = Calendar.getInstance().apply {
+            set(Calendar.YEAR, selectedYear ?: 0)
+            set(Calendar.MONTH, (selectedMonth ?: 1) - 1) // Month is zero-based
+        }
+        val totalDaysInMonth = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
+
         val validDays = (1..totalDaysInMonth).count { day ->
-            val calendar = Calendar.getInstance().apply {
+            val dayCalendar = Calendar.getInstance().apply {
                 set(Calendar.YEAR, selectedYear ?: 0)
                 set(Calendar.MONTH, (selectedMonth ?: 1) - 1) // Month is zero-based
                 set(Calendar.DAY_OF_MONTH, day)
             }
 
+            // Check if the day is a holiday
             val isHoliday = holidaysMap.keys.any { holidayDate ->
                 holidayDate.get(Calendar.YEAR) == selectedYear &&
                         holidayDate.get(Calendar.MONTH) + 1 == selectedMonth &&
                         holidayDate.get(Calendar.DAY_OF_MONTH) == day
             }
 
-            val dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK)
+            // Check if the day is part of excluded weekdays based on company holidays
+            val dayOfWeek = dayCalendar.get(Calendar.DAY_OF_WEEK)
             val isExcludedWeekday = perusahaan?.holiday?.split(",\\s*".toRegex())?.any { day ->
                 when (day.trim().lowercase()) {
                     "senin" -> dayOfWeek == Calendar.MONDAY
@@ -449,11 +453,26 @@ class LaporanActivity : AppCompatActivity() {
                 }
             } ?: false
 
-            !isHoliday && !isExcludedWeekday
+            // Check if the day falls within any dinas or izin periods (dates when dinas or izin are granted)
+            val isDinasOrIzin = dinasItemList.any { dinas ->
+                val dinasStartDate = dinas.tanggal_berangkat
+                val dinasEndDate = dinas.tanggal_pulang
+                val isWithinDinas = dayCalendar.after(dinasStartDate) && dayCalendar.before(dinasEndDate)
+                isWithinDinas
+            } || izinItemList.any { izin ->
+                val izinStartDate = izin.tanggal
+                val izinEndDate = izinStartDate // Assuming izin is for a single day, adjust if necessary
+                val isWithinIzin = dayCalendar == izinStartDate
+                isWithinIzin
+            }
+
+            // Return true if the day is valid (not a holiday, excluded weekday, or part of dinas/izin)
+            !isHoliday && !isExcludedWeekday && !isDinasOrIzin
         }
 
         return validDays
     }
+
 
 
     private fun processDataForChart(
@@ -1585,7 +1604,9 @@ class LaporanActivity : AppCompatActivity() {
                                     jsonObject.getString("bukti"),
                                     jsonObject.getString("status")
                                 )
-                                dinasItemList.add(dinasItem)
+                                if(dinasItem.status == "Accept"){
+                                    dinasItemList.add(dinasItem)
+                                }
                             }
                             updateMonthAndYearAdapters("dinas")
                         } catch (e: JSONException) {
@@ -1702,7 +1723,9 @@ class LaporanActivity : AppCompatActivity() {
                                     jsonObject.getString("bukti"),
                                     jsonObject.getString("status")
                                 )
-                                lemburItemList.add(lemburItem)
+                                if(lemburItem.status == "Accept"){
+                                    lemburItemList.add(lemburItem)
+                                }
                             }
                             updateMonthAndYearAdapters("lembur")
                         } catch (e: JSONException) {
@@ -1753,7 +1776,9 @@ class LaporanActivity : AppCompatActivity() {
                                     bukti = jsonObject.optString("bukti"),
                                     status = jsonObject.optString("status")
                                 )
-                                sesilemburItemList.add(sesiItem)
+                                if(sesiItem.status == "Accept"){
+                                    sesilemburItemList.add(sesiItem)
+                                }
                             }
                             updateMonthAndYearAdapters("lembur")
                         } catch (e: JSONException) {
@@ -1803,7 +1828,9 @@ class LaporanActivity : AppCompatActivity() {
                                     jsonObject.getString("bukti"),
                                     jsonObject.getString("status")
                                 )
-                                izinItemList.add(izinItem)
+                                if(izinItem.status == "Accept"){
+                                    izinItemList.add(izinItem)
+                                }
                             }
                             updateMonthAndYearAdapters("izin")
                         } catch (e: JSONException) {

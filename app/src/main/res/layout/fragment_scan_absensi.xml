@@ -81,8 +81,7 @@
                 app:frameCornersSize="40dp"
                 app:frameSize="0.70"
                 app:frameThickness="6dp"
-                android:nestedScrollingEnabled="false"
-                app:maskColor="#F9FCFF" />
+                android:nestedScrollingEnabled="false" />
             <com.airbnb.lottie.LottieAnimationView
                 android:id="@+id/lottie"
                 android:layout_width="match_parent"
@@ -96,6 +95,7 @@
                 android:text="Scanning code..."
                 android:textColor="@android:color/tertiary_text_dark"
                 android:layout_gravity="center"
+                android:textAlignment="center"
                 android:textSize="16sp" />
 
         </LinearLayout>

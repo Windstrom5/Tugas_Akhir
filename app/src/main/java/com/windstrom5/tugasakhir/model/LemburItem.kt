@@ -16,7 +16,7 @@ data class LemburItem(
     val waktu_pulang: Time,
     val pekerjaan: String,
     val bukti: String,
-    val status: String
+    var status: String
 ) : Parcelable {
     constructor(parcel: Parcel) : this(
         parcel.readValue(Int::class.java.classLoader) as? Int,

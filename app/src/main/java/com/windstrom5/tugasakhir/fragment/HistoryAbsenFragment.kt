@@ -29,6 +29,7 @@ import com.windstrom5.tugasakhir.model.Pekerja
 import com.windstrom5.tugasakhir.model.Perusahaan
 import com.windstrom5.tugasakhir.model.historyAbsen
 import okhttp3.ResponseBody
+import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 import retrofit2.Call
@@ -93,23 +94,21 @@ class HistoryAbsenFragment : Fragment() {
         return view
     }
 
-    private fun fetchDataPekerjaFromApi(namaPerusahaan: String,nama_pekerja: String) {
+    private fun fetchDataPekerjaFromApi(namaPerusahaan: String, nama_pekerja: String) {
         val url = "https://selected-jaguar-presently.ngrok-free.app/api/"
         val retrofit = Retrofit.Builder()
             .baseUrl(url)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
         val apiService = retrofit.create(ApiService::class.java)
-        val call = apiService.getDataAbsenPekerja(namaPerusahaan,nama_pekerja)
+        val call = apiService.getDataAbsenPekerja(namaPerusahaan, nama_pekerja)
         call.enqueue(object : Callback<ResponseBody> {
             override fun onResponse(call: Call<ResponseBody>, response: Response<ResponseBody>) {
                 if (response.isSuccessful) {
                     response.body()?.let { responseBody ->
                         try {
                             val jsonResponse = responseBody.string()
-                            val responseData = JSONObject(jsonResponse)
-                            val dataArray = responseData.getJSONArray("data")
-                            // Initialize a map to hold status with corresponding Absen list
+                            val dataArray = JSONArray(jsonResponse) // Parse as JSONArray directly
                             val statusWithAbsenMap = mutableMapOf<String, MutableList<AbsenItem>>()
 
                             for (i in 0 until dataArray.length()) {
@@ -117,70 +116,59 @@ class HistoryAbsenFragment : Fragment() {
                                 val status: String
                                 val keluar: Time?
 
-                                if (jsonObject.has("jam_keluar")) {
+                                if (jsonObject.has("jam_keluar") && !jsonObject.isNull("jam_keluar")) {
                                     keluar = Time.valueOf(jsonObject.getString("jam_keluar"))
                                     status = "Completed"
                                 } else {
                                     keluar = null
                                     status = "OnGoing"
                                 }
-                                val Absen = AbsenItem(
-                                    id = jsonObject.getInt("id"),
-                                    id_perusahaan = jsonObject.getInt("id_perusahaan"),
-                                    id_pekerja = jsonObject.getInt("id_pekerja"),
-                                    nama_pekerja = jsonObject.getString("nama_pekerja"),
-                                    nama_perusahaan = jsonObject.getString("nama_perusahaan"),
-                                    tanggal = Date(jsonObject.getLong("tanggal")),
-                                    masuk = Time.valueOf(jsonObject.getString("jam_masuk")),
-                                    keluar = keluar
-                                )
+
+                                val absen = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                                    .parse(jsonObject.getString("tanggal"))?.let {
+                                        AbsenItem(
+                                            id = jsonObject.getInt("id"),
+                                            id_perusahaan = jsonObject.getInt("id_perusahaan"),
+                                            id_pekerja = jsonObject.getInt("id_pekerja"),
+                                            nama_pekerja = jsonObject.getString("nama_pekerja"),
+                                            nama_perusahaan = jsonObject.getString("nama_perusahaan"),
+                                            tanggal = it,
+                                            masuk = Time.valueOf(jsonObject.getString("jam_masuk")),
+                                            keluar = keluar
+                                        )
+                                    }
+
                                 // Add Absen to corresponding status list
                                 if (statusWithAbsenMap.containsKey(status)) {
-                                    statusWithAbsenMap[status]?.add(Absen)
+                                    if (absen != null) {
+                                        statusWithAbsenMap[status]?.add(absen)
+                                    }
                                 } else {
-                                    statusWithAbsenMap[status] = mutableListOf(Absen)
+                                    statusWithAbsenMap[status] = absen?.let { mutableListOf(it) }!!
                                 }
                             }
 
-                            // Convert the map to a list of StatusWithAbsen objects
                             val statusWithAbsenList = statusWithAbsenMap.map { entry ->
                                 historyAbsen(entry.key, entry.value)
                             }
-                            if (adapter != null) {
-                                Log.d("FetchData", "Clearing old data")
-                                adapter.clearData() // Clear old data
-                                Log.d("FetchData", "Updating new data")
-                                adapter.updateData(statusWithAbsenList) // Set new data
-                            } else {
-                                Log.d("FetchData", "Setting new adapter")
-                                Log.d("FetchData", "Pekerja")
-                                val newAdapter = perusahaan?.let {
-                                    AbsenAdapter(
-                                        it,
-                                        requireContext(),
-                                        statusWithAbsenList,
-                                        "Pekerja"
-                                    )
-                                }
-                                expandableListView?.setAdapter(newAdapter)
-                            }
+                            adapter.clearData()
+                            adapter.updateData(statusWithAbsenList)
                             swipeRefreshLayout.isRefreshing = false
                         } catch (e: JSONException) {
                             Log.e("FetchDataError", "Error parsing JSON: ${e.message}")
                         }
                     }
                 } else {
-                    // Handle unsuccessful response
                     Log.e("FetchDataError", "Failed to fetch data: ${response.code()}")
                 }
             }
 
             override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
-                // Handle network failures
                 Log.e("FetchDataError", "Failed to fetch data: ${t.message}")
             }
         })
     }
+
 
     private fun fetchDataPerusahaanFromApi(namaPerusahaan: String) {
         val url = "https://selected-jaguar-presently.ngrok-free.app/api/"

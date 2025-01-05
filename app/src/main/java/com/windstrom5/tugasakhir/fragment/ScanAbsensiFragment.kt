@@ -161,7 +161,7 @@ class ScanAbsensiFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         lottie = view.findViewById(R.id.lottie)
         textView = view.findViewById(R.id.textView)
-        fetchHolidayData()
+//        fetchHolidayData()
         checkLocationPermission()
         scannerView = view.findViewById(R.id.scanner_view)
         textView.setText("Put The QR Code Inside The Box")
@@ -186,18 +186,15 @@ class ScanAbsensiFragment : Fragment() {
 //                .load(imageUrl)
 //                .into(logo)
 //        }
-        if (isTodayHolidayOrSelectedDay()) {
-            Log.d("ScanAbsensiFragment", "Today is a holiday - showing holiday animation")
-            showHolidayAnimation()
-        } else {
-            Log.d("ScanAbsensiFragment", "Not a holiday - checking camera permission")
-//            if (isInternetAvailable()) {
+        fetchHolidayData {
+            // This block runs after fetchHolidayData completes
+            if (isTodayHolidayOrSelectedDay()) {
+                Log.d("ScanAbsensiFragment", "Today is a holiday - showing holiday animation")
+                showHolidayAnimation()
+            } else {
+                Log.d("ScanAbsensiFragment", "Not a holiday - checking camera permission")
                 checkCameraPermissionAndStartScanner()
-//            } else {
-//                // Show Toast if no internet connection
-//                Toast.makeText(requireContext(), "No internet connection. Please check your connection.", Toast.LENGTH_LONG).show()
-//            }
-
+            }
         }
     }
 //private suspend fun isInternetAvailable(): Boolean {
@@ -390,36 +387,40 @@ private fun fetchDataFromApi(namaPerusahaan: String) {
         codeScanner?.releaseResources()
         super.onPause()
     }
-    private fun fetchHolidayData() {
+    private fun fetchHolidayData(onComplete: () -> Unit) {
         val currentYear = Calendar.getInstance().get(Calendar.YEAR)
         val url = "https://dayoffapi.vercel.app/api?year=$currentYear"
 
         val jsonArrayRequest = JsonArrayRequest(
             Request.Method.GET, url, null,
             { response ->
-                holidaysMap.clear() // Clear previous data
-
+                holidaysMap.clear()
+                val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
                 for (i in 0 until response.length()) {
                     val holidayObject = response.getJSONObject(i)
-                    val date = holidayObject.getString("tanggal")
+                    val dateString = holidayObject.getString("tanggal") // e.g., "2025-01-01"
                     val description = holidayObject.getString("keterangan")
 
-                    // Parse date string into Calendar object
-                    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                    val holidayDate = Calendar.getInstance().apply {
-                        time = dateFormat.parse(date)
+                    // Convert date string to Calendar
+                    val date = dateFormat.parse(dateString)
+                    val calendar = Calendar.getInstance()
+                    date?.let {
+                        calendar.time = it
+                        holidaysMap[calendar] = description
                     }
-
-                    holidaysMap[holidayDate] = description
                 }
+                Log.d("Updated Holidays Map", holidaysMap.toString())
+                onComplete() // Notify that data fetching is done
             },
             { error ->
-                error.printStackTrace()
+                Log.e("HolidayError", "Failed to fetch holiday data: ${error.message}")
+                onComplete() // Proceed even if there’s an error
             }
         )
 
-        Volley.newRequestQueue(requireContext()).add(jsonArrayRequest)
+        requestQueue.add(jsonArrayRequest)
     }
+
     private fun isTodayHolidayOrSelectedDay(): Boolean {
         val today = Calendar.getInstance()
         val dayName = SimpleDateFormat("EEEE", Locale("id", "ID")).format(today.time)  // Get today's day name in full
@@ -445,8 +446,15 @@ private fun fetchDataFromApi(namaPerusahaan: String) {
                 "minggu" -> disabledWeekdays.add(Calendar.SUNDAY)
                 "nasional" -> {
                     // If "Nasional" is mentioned, mark it as a national holiday
-                    if (isNationalHoliday) {
-                        textView.text = "Today is a national holiday. Enjoy your day off!"
+                    holidaysMap.forEach { (holidayDate, description) ->
+                        if (today.get(Calendar.YEAR) == holidayDate.get(Calendar.YEAR) &&
+                            today.get(Calendar.MONTH) == holidayDate.get(Calendar.MONTH) &&
+                            today.get(Calendar.DAY_OF_MONTH) == holidayDate.get(Calendar.DAY_OF_MONTH)
+                        ) {
+                            // Update textView with the specific holiday description
+                            textView.text = "Today is a national holiday: \n$description. \nEnjoy your day!"
+                            return true
+                        }
                     }
                 }
             }

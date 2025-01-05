@@ -18,6 +18,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
+import android.provider.OpenableColumns
 import android.text.Editable
 import android.text.InputType
 import android.text.TextWatcher
@@ -139,11 +140,6 @@ class PreviewDialogFragment: DialogFragment() {
             return pekerja?.nama
         }
         return null // If pekerjaList is null or no match found
-    }
-    private fun pickImageFromGallery() {
-        val intent = Intent(Intent.ACTION_GET_CONTENT)
-        intent.type = "image/*"
-        startActivityForResult(intent, PICK_IMAGE_REQUEST_CODE)
     }
     private fun parseAdminList(adminArray: JSONArray): List<Admin> {
         val adminList = mutableListOf<Admin>()
@@ -384,8 +380,8 @@ class PreviewDialogFragment: DialogFragment() {
 
 
     private fun updateButtonsAndLayout(startTime: String, endTime: String) {
-        val acceptButton = view?.findViewById<Button>(R.id.acceptButton)
-        val rejectButton = view?.findViewById<Button>(R.id.rejectButton)
+        val acceptButton = view?.findViewById<CircularProgressButton>(R.id.acceptButton)
+        val rejectButton = view?.findViewById<CircularProgressButton>(R.id.rejectButton)
         val pekerjaan = view?.findViewById<TextInputLayout>(R.id.keteranganInputLayout)
         val change = view?.findViewById<Button>(R.id.changeFile)
         val sdf = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
@@ -399,28 +395,38 @@ class PreviewDialogFragment: DialogFragment() {
         // Check if current time is within the selected session's time range
         if (current >= start && current <= end) {
             // Show 'Save' button and hide 'Cancel' button
+
             acceptButton?.text = "Save"
             rejectButton?.text = "Cancel"
             rejectButton?.visibility = View.VISIBLE
             pekerjaan?.isEnabled = true
             change?.isEnabled = true
+            pekerjaan?.editText?.focusable = View.FOCUSABLE
+            pekerjaan?.editText?.isFocusableInTouchMode = true
             text?.visibility = View.VISIBLE
+            Log.d("Test","Going Here")
             textfile?.visibility = View.VISIBLE
             selectedFileName?.visibility = View.VISIBLE
             change?.visibility = View.VISIBLE
+            change?.isEnabled = true
             // Make option layout visible
         } else if (current > end){
             acceptButton?.text = "Sesi Expired"
 //            rejectButton?.isEnabled = false
             rejectButton?.text = "Cancel"
             rejectButton?.visibility = View.GONE
+            pekerjaan?.focusable = View.NOT_FOCUSABLE
+            pekerjaan?.isFocusableInTouchMode = false
             pekerjaan?.isEnabled = false
             change?.isEnabled = false
             change?.visibility = View.GONE
             rejectButton?.visibility = View.GONE
             text?.visibility = View.GONE
             textfile?.visibility = View.GONE
+            change?.setText("Change")
+            Log.d("Test","Going Here1")
             selectedFileName?.visibility = View.GONE
+            acceptButton?.text = "Save"
             // Make option layout visible
         } else {
             // Set 'Save' button to countdown or appropriate text
@@ -435,6 +441,9 @@ class PreviewDialogFragment: DialogFragment() {
             if (diffInMinutes > 0) {
                 acceptButton?.text = "Waiting\n$diffInMinutes minutes"
             } else {
+                pekerjaan?.focusable = View.FOCUSABLE
+                pekerjaan?.isFocusableInTouchMode = true
+                Log.d("Test","Going Here2")
                 acceptButton?.text = "Save"
             }
             rejectButton?.visibility = View.GONE
@@ -512,7 +521,7 @@ class PreviewDialogFragment: DialogFragment() {
                 view?.findViewById<TextInputLayout>(R.id.keteranganInputLayout)?.editText?.setText("")
                 val change = view?.findViewById<Button>(R.id.changeFile)
                 change?.setOnClickListener {
-                    pickImageFromGallery()
+                    pickImage()
                 }
             }
         }
@@ -568,8 +577,11 @@ class PreviewDialogFragment: DialogFragment() {
             Log.d("LemburLog", "Matching sessions found: ${matchingSessions?.toString()}")
             if (matchingSessions != null && matchingSessions.isNotEmpty()) {
                 val firstMatchingSession = matchingSessions.first()
+                Log.d("LemburLog", "Matching sessions found: ${matchingSessions?.toString()}")
 
                 // Update the keterangan field
+                val keterangan = view?.findViewById<TextInputLayout>(R.id.keteranganInputLayout)
+
                 view?.findViewById<TextInputLayout>(R.id.keteranganInputLayout)?.editText?.setText(firstMatchingSession.keterangan)
 
                 val dateFormatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
@@ -589,6 +601,8 @@ class PreviewDialogFragment: DialogFragment() {
                         error.printStackTrace()
                     }
                 )
+                val change = view?.findViewById<Button>(R.id.changeFile)
+                change?.text = "Change"
                 imageView?.visibility =View.VISIBLE
                 val requestQueue = Volley.newRequestQueue(requireContext())
                 requestQueue.add(imageRequest)
@@ -598,14 +612,22 @@ class PreviewDialogFragment: DialogFragment() {
                 Log.d("LemburLog", startTimeDate.toString() + " - " + endTimeDate.toString())
                 val imageView = view?.findViewById<ImageView>(R.id.imageView)
                 imageView?.visibility =View.GONE
-                view?.findViewById<TextInputLayout>(R.id.keteranganInputLayout)?.editText?.setText("")
                 val change = view?.findViewById<Button>(R.id.changeFile)
+                change?.text = "Upload"
                 change?.setOnClickListener{
-                    pickImageFromGallery()
+                    pickImage()
                 }
                 // Set up button actions for adding a new session
                 setupButtonsForNewSession()
             }
+        }else{
+            val change = view?.findViewById<Button>(R.id.changeFile)
+            change?.text = "Upload"
+            change?.setOnClickListener{
+                pickImage()
+            }
+            // Set up button actions for adding a new session
+            setupButtonsForNewSession()
         }
 
         updateButtonsAndLayout(startTime, endTime)
@@ -617,18 +639,34 @@ class PreviewDialogFragment: DialogFragment() {
         if(category == "session_admin"){
             acceptButton?.setOnClickListener {
                 acceptButton.startAnimation()
-                updateDataSesi()
+                updateStatus("Accept", "Sesi")
             }
 
             rejectButton?.setOnClickListener {
                 rejectButton.startAnimation()
+                updateStatus("Reject", "Sesi")
                 // Handle cancel or rejection of session
                 dismiss()
             }
         }else{
             acceptButton?.setOnClickListener {
                 acceptButton.startAnimation()
-                updateDataSesi()
+                if(isAllFieldSessionFilled()){
+                    updateDataSesi()
+                }else{
+                    acceptButton.revertAnimation()
+                    view?.let {
+                        MotionToast.createToast(
+                            requireActivity(),
+                            "Save Failed",
+                            "Terdapat Field Yang Belum Terisi",
+                            MotionToastStyle.ERROR,
+                            MotionToast.GRAVITY_BOTTOM,
+                            MotionToast.LONG_DURATION,
+                            ResourcesCompat.getFont(requireContext(), R.font.ralewaybold)
+                        )
+                    }
+                }
             }
 
             rejectButton?.setOnClickListener {
@@ -642,12 +680,26 @@ class PreviewDialogFragment: DialogFragment() {
     }
 
     private fun setupButtonsForNewSession() {
-        val acceptButton = view?.findViewById<Button>(R.id.acceptButton)
-        val rejectButton = view?.findViewById<Button>(R.id.rejectButton)
+        val acceptButton = view?.findViewById<CircularProgressButton>(R.id.acceptButton)
+        val rejectButton = view?.findViewById<CircularProgressButton>(R.id.rejectButton)
         acceptButton?.setOnClickListener {
-            // Add new session data here
-//            addNewSessionData()
-            saveDataSesi()
+            acceptButton.startAnimation()
+            if(isAllFieldSessionFilled()){
+                saveDataSesi()
+            }else{
+                acceptButton.revertAnimation()
+                view?.let {
+                    MotionToast.createToast(
+                        requireActivity(),
+                        "Save Failed",
+                        "Terdapat Field Yang Belum Terisi",
+                        MotionToastStyle.ERROR,
+                        MotionToast.GRAVITY_BOTTOM,
+                        MotionToast.LONG_DURATION,
+                        ResourcesCompat.getFont(requireContext(), R.font.ralewaybold)
+                    )
+                }
+            }
             Toast.makeText(requireContext(), "New session added successfully!", Toast.LENGTH_SHORT).show()
             dismiss()
         }
@@ -1812,20 +1864,25 @@ class PreviewDialogFragment: DialogFragment() {
         }
     }
     private fun pickFile() {
-        val intent = Intent(Intent.ACTION_GET_CONTENT)
-        intent.type = "*/*" // Allow all file types
-        intent.putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("application/pdf", "image/*")) // Specify PDF and image MIME types
+        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+            type = "*/*" // Allow all file types
+            putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("application/pdf", "image/*")) // Support PDFs and images
+        }
         startActivityForResult(intent, PICK_PDF_OR_IMAGE_REQUEST_CODE)
     }
+
     private fun pickImage() {
-        val intent = Intent(Intent.ACTION_GET_CONTENT)
-        intent.type = "*/*" // Allow all file types
-        intent.putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("image/*")) // Specify PDF and image MIME types
+        Log.d("DialogFragment", "Image Clicked")
+        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+            type = "image/*" // Restrict to image types only
+        }
         startActivityForResult(intent, PICK_PDF_OR_IMAGE_REQUEST_CODE)
     }
+
     private fun pickPdf() {
-        val intent = Intent(Intent.ACTION_GET_CONTENT)
-        intent.type = "application/pdf"
+        val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+            type = "application/pdf" // Restrict to PDF files only
+        }
         startActivityForResult(intent, PICK_PDF_OR_IMAGE_REQUEST_CODE)
     }
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -1834,127 +1891,98 @@ class PreviewDialogFragment: DialogFragment() {
             data?.data?.let { fileUri ->
                 val mimeType = requireContext().contentResolver.getType(fileUri)
                 if (mimeType != null) {
-                    if (mimeType.startsWith("image/")) {
-                        view?.findViewById<ImageView>(R.id.imageView)?.visibility = View.VISIBLE
-                        view?.findViewById<PDFView>(R.id.pdfView)?.visibility = View.GONE
-                        val displayName = getRealFilePathFromUri(fileUri)
-                        if (displayName != null) {
-                            val file = File(requireContext().cacheDir, displayName)
-                            try {
-                                requireContext().contentResolver.openInputStream(fileUri)?.use { inputStream ->
-                                    FileOutputStream(file).use { outputStream ->
-                                        inputStream.copyTo(outputStream)
-                                    }
-                                }
-                                val selectedFileName = view?.findViewById<TextView>(R.id.selectedFileName)
-                                selectedFileName?.text = displayName
-                                selectedFileName?.addTextChangedListener(watcher)
-                                selectedFile = file
-                                view?.findViewById<ImageView>(R.id.imageView)?.let {
-                                    Glide.with(this)
-                                        .load(fileUri) // Load the image using the URI
-                                        .into(it)
-                                } // Set it into
-                            } catch (e: IOException) {
-                                Log.e("MyFragment", "Failed to copy file: ${e.message}")
-                            }
-                        } else {
-                            Log.e("MyFragment", "Failed to get display name from URI")
-                        }
-                    } else if (mimeType == "application/pdf") {
-                        view?.findViewById<ImageView>(R.id.imageView)?.visibility = View.GONE
-                        view?.findViewById<PDFView>(R.id.pdfView)?.visibility = View.VISIBLE
-                        view?.findViewById<PDFView>(R.id.pdfView)?.fromUri(fileUri)
-                            ?.password(null) // If your PDF is password protected, provide the password here
-                            ?.defaultPage(0) // Specify which page to display by default
-                            ?.enableSwipe(true) // Enable or disable swipe to change pages
-                            ?.swipeHorizontal(false) // Set to true to enable horizontal swipe
-                            ?.enableDoubletap(true) // Enable double tap to zoom
-                            ?.onLoad { /* Called when PDF is loaded */ }
-                            ?.onPageChange { page, pageCount -> /* Called when page is changed */ }
-                            ?.onPageError { page, t -> /* Called when an error occurs while loading a page */ }
-                            ?.scrollHandle(null) // Specify a custom scroll handle if needed
-                            ?.enableAntialiasing(true) // Improve rendering a little bit on low-res screens
-                            ?.spacing(0) // Add spacing between pages in dp
-                            ?.load()
-                        val displayName = getRealFilePathFromUri(fileUri)
-                        if (displayName != null) {
-                            val file = File(requireContext().cacheDir, displayName)
-                            try {
-                                requireContext().contentResolver.openInputStream(fileUri)?.use { inputStream ->
-                                    FileOutputStream(file).use { outputStream ->
-                                        inputStream.copyTo(outputStream)
-                                    }
-                                }
-                                val selectedFileName = view?.findViewById<TextView>(R.id.selectedFileName)
-                                selectedFileName?.text = displayName
-                                selectedFileName?.addTextChangedListener(watcher)
-                                selectedFile = file
-                            } catch (e: IOException) {
-                                Log.e("MyFragment", "Failed to copy file: ${e.message}")
-                            }
-                        } else {
-                            Log.e("MyFragment", "Failed to get display name from URI")
-                        }
-                    }else{
-                        MotionToast.createToast(requireActivity(), "Failed",
-                            "Jenis File tidak Didukung",
-                            MotionToastStyle.ERROR,
-                            MotionToast.GRAVITY_BOTTOM,
-                            MotionToast.LONG_DURATION,
-                            ResourcesCompat.getFont(requireContext(), R.font.ralewaybold))
+                    when {
+                        mimeType.startsWith("image/") -> handleImage(fileUri)
+                        mimeType == "application/pdf" -> handlePdf(fileUri)
+                        else -> showUnsupportedFileError()
                     }
                 } else {
-                    Log.e("MyFragment", "Failed to get MIME type")
+                    Log.e("DialogFragment", "Failed to get MIME type")
                 }
             }
         }
     }
-    private val watcher = object : TextWatcher {
-        override fun beforeTextChanged(charSequence: CharSequence?, start: Int, count: Int, after: Int) {
-            // Not needed for this example
+
+    private fun handleImage(fileUri: Uri) {
+        Log.d("DialogFragment", "Handling image URI: $fileUri")
+
+        val mimeType = requireContext().contentResolver.getType(fileUri)
+        Log.d("DialogFragment", "Detected MIME type: $mimeType")
+
+        val displayName = getRealFilePathFromUri(fileUri) ?: "Unknown Image"
+        Log.d("DialogFragment", "Display name resolved: $displayName")
+
+        val selectedFileName = view?.findViewById<TextView>(R.id.selectedFileName)
+        val imageView = view?.findViewById<ImageView>(R.id.imageView)
+        val pdfView = view?.findViewById<PDFView>(R.id.pdfView)
+
+        if (imageView == null || selectedFileName == null) {
+            Log.e("DialogFragment", "One or more views are null!")
+            return
         }
 
-        override fun onTextChanged(charSequence: CharSequence?, start: Int, before: Int, count: Int) {
-            // Not needed for this example
-        }
+        pdfView?.visibility = View.GONE
+        imageView.visibility = View.VISIBLE
+        selectedFileName.text = displayName
 
-        override fun afterTextChanged(editable: Editable?) {
-            // Update the button state whenever a field is changed
-            if (dinas != null) {
+        // Use Glide to load the image
+        Glide.with(this)
+            .load(fileUri)
+            .into(imageView)
 
-            }else if (lembur  != null) {
+        Log.d("DialogFragment", "Image file selected: $displayName")
+    }
 
-            }else{
-                view?.findViewById<CircularProgressButton>(R.id.acceptButton)?.isEnabled = isAllFieldsIzinFilled()
-            }
+
+    private fun handlePdf(fileUri: Uri) {
+        val displayName = getRealFilePathFromUri(fileUri) ?: "Unknown PDF"
+        val selectedFileName = view?.findViewById<TextView>(R.id.selectedFileName)
+        val imageView = view?.findViewById<ImageView>(R.id.imageView)
+        val pdfView = view?.findViewById<PDFView>(R.id.pdfView)
+
+        if (selectedFileName != null && pdfView != null) {
+            imageView?.visibility = View.GONE
+            pdfView.visibility = View.VISIBLE
+            selectedFileName.text = displayName
+            pdfView.fromUri(fileUri)
+                ?.password(null)
+                ?.defaultPage(0)
+                ?.enableSwipe(true)
+                ?.swipeHorizontal(false)
+                ?.enableDoubletap(true)
+                ?.spacing(0)
+                ?.load()
+            Log.d("DialogFragment", "PDF file selected: $displayName")
         }
     }
-    private fun isAllFieldsIzinFilled(): Boolean {
-        val TINama = view?.findViewById<TextInputLayout>(R.id.namaInputLayout)
-        val TITanggal = view?.findViewById<TextInputLayout>(R.id.tanggalInputLayout)
-        val acIzin = view?.findViewById<AutoCompleteTextView>(R.id.acizin)
+
+    private fun showUnsupportedFileError() {
+        MotionToast.createToast(
+            requireActivity(),
+            "Failed",
+            "Jenis File tidak Didukung",
+            MotionToastStyle.ERROR,
+            MotionToast.GRAVITY_BOTTOM,
+            MotionToast.LONG_DURATION,
+            ResourcesCompat.getFont(requireContext(), R.font.ralewaybold)
+        )
+    }
+
+    private fun getRealFilePathFromUri(uri: Uri): String? {
+        val cursor = requireContext().contentResolver.query(uri, null, null, null, null)
+        return cursor?.use {
+            val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            cursor.moveToFirst()
+            cursor.getString(nameIndex)
+        }
+    }
+    private fun isAllFieldSessionFilled(): Boolean {
+
         val TIAlasan = view?.findViewById<TextInputLayout>(R.id.kegiatanInputLayout)
         val selectedFileName = view?.findViewById<TextView>(R.id.selectedFileName)
 
-        return TINama?.editText?.text?.isNotEmpty() ?: false &&
-                TITanggal?.editText?.text?.isNotEmpty() ?: false &&
-                acIzin?.text?.isNotEmpty() ?: false &&
-                TIAlasan?.editText?.text?.isNotEmpty() ?: false &&
+        return TIAlasan?.editText?.text?.isNotEmpty() ?: false &&
                 selectedFileName?.text != "No file selected"
-    }
-    private fun getRealFilePathFromUri(uri: Uri): String? {
-        val projection = arrayOf(MediaStore.Files.FileColumns.DISPLAY_NAME)
-        val cursor = requireActivity().contentResolver.query(uri, projection, null, null, null)
-        cursor?.use {
-            val columnIndex = it.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DISPLAY_NAME)
-            it.moveToFirst()
-            val displayName = it.getString(columnIndex)
-            Log.d("MyFragment", "Display Name: $displayName")
-            return displayName
-        }
-        Log.d("MyFragment", "Cursor is null")
-        return null
     }
 
     private fun updateStatus(status: String,category:String) {
@@ -2005,15 +2033,18 @@ class PreviewDialogFragment: DialogFragment() {
                             ResourcesCompat.getFont(requireContext(), R.font.ralewaybold)
                         )
                     } else if (category == "Lembur") {
-                        MotionToast.createToast(
-                            requireActivity(),
-                            "Update Lembur Success",
-                            "Silahkan Refresh Halaman",
-                            MotionToastStyle.SUCCESS,
-                            MotionToast.GRAVITY_BOTTOM,
-                            MotionToast.LONG_DURATION,
-                            ResourcesCompat.getFont(requireContext(), R.font.ralewaybold)
-                        )
+                        activity?.let { context ->
+                            MotionToast.createToast(
+                                context,
+                                "Update Lembur Success",
+                                "Silahkan Refresh Halaman",
+                                MotionToastStyle.SUCCESS,
+                                MotionToast.GRAVITY_BOTTOM,
+                                MotionToast.LONG_DURATION,
+                                ResourcesCompat.getFont(requireContext(), R.font.ralewaybold)
+                            )
+                        }
+
                     } else if(category == "Dinas"){
                         MotionToast.createToast(
                             requireActivity(),

@@ -93,7 +93,6 @@ class RegisterPekerjaActivity : AppCompatActivity() {
     private lateinit var requestQueue: RequestQueue
     private var kategoriPekerja: List<String> =
         mutableListOf("Admin", "Pekerja");
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityRegisterPekerjaBinding.inflate(layoutInflater)
@@ -244,7 +243,7 @@ class RegisterPekerjaActivity : AppCompatActivity() {
         val apiService = retrofit.create(ApiService::class.java)
         val nama_perusahaan = createPartFromString(perusahaan.nama.toString())
         val emailRequestBody = createPartFromString(TIEmail.editText?.text.toString())
-        val passwordRequestBody = createPartFromString("123")
+        val passwordRequestBody = createPartFromString("123")   
         val nama = createPartFromString(TINama.editText?.text.toString())
         val tanggalRequestBody = createPartFromString(selectedDateSqlFormat.toString())
         val profilePath = selectedFile
@@ -278,7 +277,6 @@ class RegisterPekerjaActivity : AppCompatActivity() {
                             )
                         )
                     }
-                    setLoading(false)
                     runOnUiThread {
                         val dialogBuilder = AlertDialog.Builder(this@RegisterPekerjaActivity)
                         dialogBuilder.setTitle("Registration Successful")
@@ -286,7 +284,7 @@ class RegisterPekerjaActivity : AppCompatActivity() {
                             "Your account has been created successfully.\n\n" +
                                     "\tUsername: ${TINama.editText?.text}\n" +
                                     "\tPassword: 123\n\n" +
-                                    "Welcome To THe Company"
+                                    "Please Verify The Email First Before Login To The App"
                         ) // You might want to replace "123" with the actual password
                         dialogBuilder.setPositiveButton("OK") { dialog, _ ->
                             // Handle OK button click if needed
@@ -327,6 +325,7 @@ class RegisterPekerjaActivity : AppCompatActivity() {
                                 e.printStackTrace()
                             }
                         }
+                        setLoading(false)
                         val dialog = dialogBuilder.create()
                         dialog.show()
                     }

@@ -35,6 +35,8 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.sql.Time
 import java.text.SimpleDateFormat
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.Locale
 
@@ -105,12 +107,16 @@ class HistoryLemburFragment : Fragment(){
                             val responseData = JSONObject(jsonResponse)
                             val dataArray = responseData.getJSONArray("data")
                             val statusWithLemburMap = mutableMapOf<String, MutableList<LemburItem>>()
+                            val now = System.currentTimeMillis() // Current time in milliseconds
+                            val currentDate = Date(now)
 
                             for (i in 0 until dataArray.length()) {
                                 val jsonObject = dataArray.getJSONObject(i)
-                                val status = jsonObject.getString("status")
+                                var status = jsonObject.getString("status")
                                 val tanggal = jsonObject.getString("tanggal")
                                 val tanggalDate = parseDate(tanggal)
+                                val waktuMasuk = Time.valueOf(jsonObject.getString("waktu_masuk"))
+                                val waktuPulang = Time.valueOf(jsonObject.getString("waktu_pulang"))
                                 val lembur = LemburItem(
                                     jsonObject.getInt("id"),
                                     jsonObject.getInt("id_perusahaan"),
@@ -124,13 +130,25 @@ class HistoryLemburFragment : Fragment(){
                                     jsonObject.getString("bukti"),
                                     jsonObject.getString("status")
                                 )
+                                val currentTimeString = String.format(
+                                    Locale.getDefault(),
+                                    "%02d:%02d:%02d",
+                                    currentDate.hours,
+                                    currentDate.minutes,
+                                    currentDate.seconds
+                                ) // Format current time with locale
+                                Log.d("Waktu",waktuMasuk.toString()+ waktuPulang.toString()+ currentTimeString)
+                                if (status == "Accept" && isNowBetween(waktuMasuk, waktuPulang, currentDate)) {
+                                    status = "On Going"
+                                    lembur.status = "On Going"
+                                    Log.d("Waktu","Goes here")
+                                }
                                 if (statusWithLemburMap.containsKey(status)) {
                                     statusWithLemburMap[status]?.add(lembur)
                                 } else {
                                     statusWithLemburMap[status] = mutableListOf(lembur)
                                 }
                             }
-
                             val statusWithLemburList = statusWithLemburMap.map { entry ->
                                 historyLembur(entry.key, entry.value)
                             }
@@ -174,7 +192,10 @@ class HistoryLemburFragment : Fragment(){
             }
         })
     }
-
+    private fun isNowBetween(startTime: Time, endTime: Time, currentDate: Date): Boolean {
+        val currentTime = Time(currentDate.hours, currentDate.minutes, currentDate.seconds)
+        return currentTime.after(startTime) && currentTime.before(endTime)
+    }
 
     private fun fetchDataPerusahaanFromApi(namaPerusahaan: String) {
         val url = "https://selected-jaguar-presently.ngrok-free.app/api/"
@@ -195,12 +216,15 @@ class HistoryLemburFragment : Fragment(){
                             val responseData = JSONObject(jsonResponse)
                             val dataArray = responseData.getJSONArray("data")
                             val statusWithLemburMap = mutableMapOf<String, MutableList<LemburItem>>()
-                            val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                            val now = System.currentTimeMillis() // Current time in milliseconds
+                            val currentDate = Date(now)
                             for (i in 0 until dataArray.length()) {
                                 val jsonObject = dataArray.getJSONObject(i)
-                                val status = jsonObject.getString("status")
-                                val tanggalString = jsonObject.getString("tanggal")
-                                val tanggalDate = parseDate(tanggalString)
+                                var status = jsonObject.getString("status")
+                                val tanggal = jsonObject.getString("tanggal")
+                                val tanggalDate = parseDate(tanggal)
+                                val waktuMasuk = Time.valueOf(jsonObject.getString("waktu_masuk"))
+                                val waktuPulang = Time.valueOf(jsonObject.getString("waktu_pulang"))
                                 val lembur = LemburItem(
                                     jsonObject.getInt("id"),
                                     jsonObject.getInt("id_perusahaan"),
@@ -213,13 +237,19 @@ class HistoryLemburFragment : Fragment(){
                                     jsonObject.getString("pekerjaan"),
                                     jsonObject.getString("bukti"),
                                     jsonObject.getString("status")
-                                )
+                                ) // Format current time with locale
+                                if (status == "Accept" && isNowBetween(waktuMasuk, waktuPulang, currentDate)) {
+                                    status = "On Going"
+                                    lembur.status = "On Going"
+                                    Log.d("Waktu","Goes here")
+                                }
                                 if (statusWithLemburMap.containsKey(status)) {
                                     statusWithLemburMap[status]?.add(lembur)
                                 } else {
                                     statusWithLemburMap[status] = mutableListOf(lembur)
                                 }
                             }
+
                             val statusWithLemburList = statusWithLemburMap.map { entry ->
                                 historyLembur(entry.key, entry.value)
                             }
