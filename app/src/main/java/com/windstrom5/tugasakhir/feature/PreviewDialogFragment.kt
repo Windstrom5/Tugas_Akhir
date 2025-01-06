@@ -382,7 +382,7 @@ class PreviewDialogFragment: DialogFragment() {
     private fun updateButtonsAndLayout(startTime: String, endTime: String) {
         val acceptButton = view?.findViewById<CircularProgressButton>(R.id.acceptButton)
         val rejectButton = view?.findViewById<CircularProgressButton>(R.id.rejectButton)
-        val pekerjaan = view?.findViewById<TextInputLayout>(R.id.keteranganInputLayout)
+        val pekerjaan = view?.findViewById<TextInputLayout>(R.id.kegiatanInputLayout)
         val change = view?.findViewById<Button>(R.id.changeFile)
         val sdf = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
         val currentTime = sdf.format(Date())
@@ -485,7 +485,7 @@ class PreviewDialogFragment: DialogFragment() {
                 val firstMatchingSession = matchingSessions.first()
                 sesilembur = firstMatchingSession.id
                 // Update the keterangan field
-                view?.findViewById<TextInputLayout>(R.id.keteranganInputLayout)?.editText?.setText(firstMatchingSession.keterangan)
+                view?.findViewById<TextInputLayout>(R.id.kegiatanInputLayout)?.editText?.setText(firstMatchingSession.keterangan)
                 if(firstMatchingSession.status == "Pending"){
                     acceptButton?.setText("Confirm")
                     rejectButton?.setText("Reject")
@@ -518,7 +518,7 @@ class PreviewDialogFragment: DialogFragment() {
                 Log.d("LemburLog", "$startTimeDate - $endTimeDate")
                 val imageView = view?.findViewById<ImageView>(R.id.imageView)
                 imageView?.visibility = View.GONE
-                view?.findViewById<TextInputLayout>(R.id.keteranganInputLayout)?.editText?.setText("")
+                view?.findViewById<TextInputLayout>(R.id.kegiatanInputLayout)?.editText?.setText("")
                 val change = view?.findViewById<Button>(R.id.changeFile)
                 change?.setOnClickListener {
                     pickImage()
@@ -580,9 +580,9 @@ class PreviewDialogFragment: DialogFragment() {
                 Log.d("LemburLog", "Matching sessions found: ${matchingSessions?.toString()}")
 
                 // Update the keterangan field
-                val keterangan = view?.findViewById<TextInputLayout>(R.id.keteranganInputLayout)
+                val keterangan = view?.findViewById<TextInputLayout>(R.id.kegiatanInputLayout)
 
-                view?.findViewById<TextInputLayout>(R.id.keteranganInputLayout)?.editText?.setText(firstMatchingSession.keterangan)
+                view?.findViewById<TextInputLayout>(R.id.kegiatanInputLayout)?.editText?.setText(firstMatchingSession.keterangan)
 
                 val dateFormatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 //                val tanggalFormatted = dateFormatter.format(firstMatchingSession.jam)
@@ -700,7 +700,7 @@ class PreviewDialogFragment: DialogFragment() {
                     )
                 }
             }
-            Toast.makeText(requireContext(), "New session added successfully!", Toast.LENGTH_SHORT).show()
+//            Toast.makeText(requireContext(), "New session added successfully!", Toast.LENGTH_SHORT).show()
             dismiss()
         }
 
@@ -716,7 +716,7 @@ class PreviewDialogFragment: DialogFragment() {
             .baseUrl(url)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
-        val pekerjaan = view?.findViewById<TextInputLayout>(R.id.keteranganInputLayout)
+        val pekerjaan = view?.findViewById<TextInputLayout>(R.id.kegiatanInputLayout)
         val apiService = retrofit.create(ApiService::class.java)
         val currentTimestamp = System.currentTimeMillis()
         val currentTime = Date(currentTimestamp)
@@ -857,7 +857,7 @@ class PreviewDialogFragment: DialogFragment() {
             .baseUrl(url)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
-        val pekerjaan = view?.findViewById<TextInputLayout>(R.id.keteranganInputLayout)
+        val pekerjaan = view?.findViewById<TextInputLayout>(R.id.kegiatanInputLayout)
         val apiService = retrofit.create(ApiService::class.java)
         val currentTimestamp = System.currentTimeMillis()
         val currentTime = Date(currentTimestamp)
@@ -865,13 +865,17 @@ class PreviewDialogFragment: DialogFragment() {
         // Optionally format the timestamp (for logging or sending)
         val timeFormatter = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
         val formattedTimestamp = timeFormatter.format(currentTime)
+        Log.d("ApiResponse", "Formatted Timestamp: $formattedTimestamp")
+        Log.d("ApiResponse", "Lembur ID: ${lembur?.id}")
+        Log.d("ApiResponse", "Keterangan: ${pekerjaan?.editText?.text.toString()}")
+        Log.d("ApiResponse", "Selected File: $selectedFile")
         val jam = createPartFromString(formattedTimestamp.toString())
         val id_lembur = createPartFromString(lembur?.id.toString())
         val keterangan = createPartFromString(pekerjaan?.editText?.text.toString())
         val buktifile = selectedFile
         val requestFile = buktifile?.let { RequestBody.create("image/*".toMediaTypeOrNull(), it) }
         val buktipart =
-            requestFile?.let { MultipartBody.Part.createFormData("bukti", buktifile?.name, it) }
+            requestFile?.let { MultipartBody.Part.createFormData("bukti", buktifile.name, it) }
         val call = buktipart?.let { apiService.AddSessionLembur(id_lembur,jam,keterangan, it) }
         if (call != null) {
             call.enqueue(object : Callback<ApiResponse> {
@@ -883,12 +887,17 @@ class PreviewDialogFragment: DialogFragment() {
                         val nama = lembur?.id_pekerja?.let { getNamaPekerjaById(it) }
                         val apiResponse = response.body()
                         Log.d("ApiResponse", "Status: ${apiResponse?.status}, Message: ${apiResponse?.message}")
-                        MotionToast.createToast(requireActivity(), "Add Lembur Success",
-                            "Session Berhasil Ditambahkan",
-                            MotionToastStyle.SUCCESS,
-                            MotionToast.GRAVITY_BOTTOM,
-                            MotionToast.LONG_DURATION,
-                            ResourcesCompat.getFont(requireContext(), R.font.ralewaybold))
+                        activity?.let { safeActivity ->
+                            MotionToast.createToast(
+                                safeActivity,
+                                "Add Lembur Success",
+                                "Session Berhasil Ditambahkan",
+                                MotionToastStyle.SUCCESS,
+                                MotionToast.GRAVITY_BOTTOM,
+                                MotionToast.LONG_DURATION,
+                                ResourcesCompat.getFont(safeActivity, R.font.ralewaybold)
+                            )
+                        } ?: Log.e("PreviewDialogFragment", "Activity is null or Fragment is detached!")
                         val message = """
                             Notification: Overtime Session Uploaded
                             
@@ -911,6 +920,8 @@ class PreviewDialogFragment: DialogFragment() {
                     Log.e("ApiResponse", "Request failed: ${t.message}")
                 }
             })
+        }else{
+            Log.d("ApiResponse","Call IS NULL")
         }
 //        setLoading(false)
     }
@@ -918,6 +929,7 @@ class PreviewDialogFragment: DialogFragment() {
         super.onViewCreated(view, savedInstanceState)
         dinas = arguments?.getParcelable("dinas")
         lembur = arguments?.getParcelable("lembur")
+        Log.d("LemburAPI",lembur.toString())
         izin = arguments?.getParcelable("izin")
         category = arguments?.getString("category")
         perusahaan?.let { fetchDataFromApi(it.nama) }
@@ -1924,7 +1936,8 @@ class PreviewDialogFragment: DialogFragment() {
         pdfView?.visibility = View.GONE
         imageView.visibility = View.VISIBLE
         selectedFileName.text = displayName
-
+        val realPath = getRealPathFromUri(fileUri)
+        selectedFile = File(realPath)
         // Use Glide to load the image
         Glide.with(this)
             .load(fileUri)
@@ -1941,6 +1954,7 @@ class PreviewDialogFragment: DialogFragment() {
         val pdfView = view?.findViewById<PDFView>(R.id.pdfView)
 
         if (selectedFileName != null && pdfView != null) {
+
             imageView?.visibility = View.GONE
             pdfView.visibility = View.VISIBLE
             selectedFileName.text = displayName
@@ -1953,6 +1967,29 @@ class PreviewDialogFragment: DialogFragment() {
                 ?.spacing(0)
                 ?.load()
             Log.d("DialogFragment", "PDF file selected: $displayName")
+        }
+    }
+    private fun getRealPathFromUri(uri: Uri): String? {
+        val context = requireContext()
+        val contentResolver = context.contentResolver
+
+        return when {
+            uri.scheme.equals("content", ignoreCase = true) -> {
+                val projection = arrayOf(MediaStore.Images.Media.DATA)
+                var realPath: String? = null
+                val cursor = contentResolver.query(uri, projection, null, null, null)
+                cursor?.use {
+                    val columnIndex = it.getColumnIndexOrThrow(MediaStore.Images.Media.DATA)
+                    if (it.moveToFirst()) {
+                        realPath = it.getString(columnIndex)
+                    }
+                }
+                realPath
+            }
+            uri.scheme.equals("file", ignoreCase = true) -> {
+                uri.path
+            }
+            else -> null
         }
     }
 

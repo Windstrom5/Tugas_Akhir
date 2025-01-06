@@ -1975,7 +1975,7 @@ class LaporanActivity : AppCompatActivity() {
                 admin = it.getParcelable("user")
             }
             val url =
-                "http://192.168.1.4/getDecryptedLogo/${perusahaan?.id}" // Replace with your actual URL
+                "https://selected-jaguar-presently.ngrok-free.app/api/Perusahaan/decryptLogo/${perusahaan?.id}" // Replace with your actual URL
             //            name.setText(perusahaan.nama)
             val imageRequest = ImageRequest(
                 url,
@@ -1989,7 +1989,18 @@ class LaporanActivity : AppCompatActivity() {
                     Toast.makeText(this, "Failed to fetch profile image", Toast.LENGTH_SHORT).show()
                 }
             )
-
+            name.setText(perusahaan?.nama)
+            val latitude = perusahaan?.latitude
+            val longitude = perusahaan?.longitude
+            val addressInfo = ReverseGeocoder.getAddressFromLocation(this@LaporanActivity, GeoPoint(
+                latitude!!, longitude!!
+            ))
+            if (addressInfo != null) {
+                val addressText = "${addressInfo.province}\n${addressInfo.country}"
+                address.text = addressText
+            } else {
+                address.text = "Address information not available"
+            }
             val requestQueue = Volley.newRequestQueue(this)
             requestQueue.add(imageRequest)
         } else {

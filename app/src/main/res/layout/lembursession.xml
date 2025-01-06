@@ -137,7 +137,7 @@
 
                 <!-- TextInputLayout for Kegiatan -->
                     <com.google.android.material.textfield.TextInputLayout
-                        android:id="@+id/keteranganInputLayout"
+                        android:id="@+id/kegiatanInputLayout"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content">
 

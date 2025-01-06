@@ -553,7 +553,7 @@ class AddLemburFragment : Fragment() {
         val kegiatan = createPartFromString(TIPekerjaan.editText?.text.toString())
 
         val buktifile = selectedFile
-        val requestFile = RequestBody.create("pdf/*".toMediaTypeOrNull(), buktifile)
+        val requestFile = RequestBody.create("image/*".toMediaTypeOrNull(), buktifile)
         val buktipart = MultipartBody.Part.createFormData("bukti", buktifile.name, requestFile)
         val call = apiService.uploadLembur(nama_Perusahaan,nama,tanggal, waktu_masuk,waktu_pulang, kegiatan, buktipart)
         call.enqueue(object : Callback<ApiResponse> {
